@@ -209,6 +209,16 @@ public:
         luaScript_ = script;
     }
 
+    // ========== Texture file ==========
+
+    const std::string& getTextureFile() const {
+        return textureFile_;
+    }
+
+    void setTextureFile(const std::string& path) {
+        textureFile_ = path;
+    }
+
 protected:
     std::string id_;
     std::string name_;
@@ -229,6 +239,7 @@ protected:
     std::unordered_map<std::string, nlohmann::json> properties_;
 
     std::string luaScript_;
+    std::string textureFile_;
 };
 
 } // namespace dice::core

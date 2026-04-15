@@ -39,7 +39,11 @@ void LuaScriptEngine::registerGameObjectType() {
         "isVisible",
         &dice::core::GameObject::isVisible,
         "setVisible",
-        &dice::core::GameObject::setVisible);
+        &dice::core::GameObject::setVisible,
+        "getIntProperty",
+        [](const dice::core::GameObject& obj, const std::string& key, int def) {
+            return obj.getProperty<int>(key, def);
+        });
 }
 
 void LuaScriptEngine::registerStandardCallbacks() {
@@ -61,6 +65,7 @@ void LuaScriptEngine::registerCallback(const std::string& name, UiCallback callb
         }
     });
 }
+
 
 sol::environment LuaScriptEngine::makeEnvironment() {
     return {lua_, sol::create, lua_.globals()};

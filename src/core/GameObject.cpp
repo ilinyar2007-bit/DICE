@@ -174,6 +174,10 @@ nlohmann::json GameObject::toJson() const {
         json["luaScript"] = luaScript_;
     }
 
+    if (!textureFile_.empty()) {
+        json["textureFile"] = textureFile_;
+    }
+
     if (!children_.empty()) {
         nlohmann::json childrenJson = nlohmann::json::array();
         for (const auto& child : children_) {
@@ -234,6 +238,10 @@ void GameObject::fromJson(const nlohmann::json& json) {
 
     if (json.contains("luaScript")) {
         luaScript_ = json["luaScript"];
+    }
+
+    if (json.contains("textureFile")) {
+        textureFile_ = json["textureFile"];
     }
 
     spdlog::debug("Loaded GameObject '{}' from JSON", id_);

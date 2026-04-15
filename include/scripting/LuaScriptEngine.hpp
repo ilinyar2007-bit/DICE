@@ -18,9 +18,9 @@ namespace dice::core {
 class GameObject;
 } // namespace dice::core
 
-namespace dice::scripting {
+#include "scripting/LuaScript.hpp"
 
-class LuaScript;
+namespace dice::scripting {
 
 using UiCallback = std::function<void(const std::string&)>;
 
@@ -45,6 +45,11 @@ public:
     void detachScript(const std::string& object_id);
 
     void registerCallback(const std::string& name, UiCallback callback);
+
+    template<typename Func>
+    void registerFunction(const std::string& name, Func&& func) {
+        lua_.set_function(name, std::forward<Func>(func));
+    }
 
 private:
     sol::state lua_;
