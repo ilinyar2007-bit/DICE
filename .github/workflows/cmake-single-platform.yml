@@ -38,6 +38,11 @@ jobs:
           libxinerama-dev \
           libgl1-mesa-dev \
           libglu1-mesa-dev
+          libudev-dev \
+          libfreetype6-dev \
+          libopenal-dev \
+          libvorbis-dev \
+          libflac-dev
 
     # ----------------------------
     # Configure CMake
