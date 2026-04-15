@@ -1,4 +1,4 @@
-name: CMake CI and tests
+name: Build and test on Linux
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           liblua5.3-dev \
           xvfb \
           valgrind \
-          ninja-build
+          ninja-build \
           libx11-dev \
           libxrandr-dev \
           libxi-dev \
@@ -55,7 +55,7 @@ jobs:
       run: cmake --build build -j
 
     # ----------------------------
-    # Run tests (with X11 fallback)
+    # Run tests
     # ----------------------------
     - name: Run tests (ctest)
       working-directory: build
@@ -63,7 +63,7 @@ jobs:
         xvfb-run -a ctest --output-on-failure --parallel 2
 
     # ----------------------------
-    # Valgrind via CTest (clean way)
+    # Valgrind (CTest memcheck)
     # ----------------------------
     - name: Memory check (CTest MemCheck)
       working-directory: build
