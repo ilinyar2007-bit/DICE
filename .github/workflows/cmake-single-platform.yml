@@ -37,7 +37,7 @@ jobs:
           libxcursor-dev \
           libxinerama-dev \
           libgl1-mesa-dev \
-          libglu1-mesa-dev
+          libglu1-mesa-dev \
           libudev-dev \
           libfreetype6-dev \
           libopenal-dev \
