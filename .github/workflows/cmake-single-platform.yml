@@ -31,6 +31,13 @@ jobs:
           xvfb \
           valgrind \
           ninja-build
+          libx11-dev \
+          libxrandr-dev \
+          libxi-dev \
+          libxcursor-dev \
+          libxinerama-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev
 
     # ----------------------------
     # Configure CMake
