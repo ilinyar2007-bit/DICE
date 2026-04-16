@@ -1,14 +1,13 @@
 #include <algorithm>
 #include <fstream>
-#include <random>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
 #include <SFML/Graphics.hpp>
 #include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
 
 #include "core/GameObject.hpp"
 #include "core/Model.hpp"
@@ -16,6 +15,7 @@
 #include "scene/DefaultFactory.hpp"
 #include "scripting/LuaScriptEngine.hpp"
 #include "ui/View.hpp"
+#include <spdlog/spdlog.h>
 
 using dice::core::GameObject;
 using dice::core::Model;
@@ -48,9 +48,9 @@ int main() {
     View view(window);
     ViewConfig vcfg;
     vcfg.backgroundColor = sf::Color(20, 20, 30);
-    vcfg.showFPS         = false;
+    vcfg.showFPS = false;
     vcfg.showObjectCount = false;
-    vcfg.showControls    = false;
+    vcfg.showControls = false;
     view.setConfig(vcfg);
 
     // ======= Font =======
@@ -79,17 +79,21 @@ int main() {
         return t;
     };
 
-    luaEngine.registerFunction("cpp_draw_text_left",
+    luaEngine.registerFunction(
+        "cpp_draw_text_left",
         [&](const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (!fontOk) return;
+            if (!fontOk)
+                return;
             auto t = makeText(s, sz, r, g, b);
             t.setPosition(x, y);
             window.draw(t);
         });
 
-    luaEngine.registerFunction("cpp_draw_text_center",
+    luaEngine.registerFunction(
+        "cpp_draw_text_center",
         [&](const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (!fontOk) return;
+            if (!fontOk)
+                return;
             auto t = makeText(s, sz, r, g, b);
             const auto lb = t.getLocalBounds();
             t.setOrigin(lb.left + lb.width / 2.f, lb.top + lb.height / 2.f);
@@ -97,9 +101,11 @@ int main() {
             window.draw(t);
         });
 
-    luaEngine.registerFunction("cpp_draw_text_right",
+    luaEngine.registerFunction(
+        "cpp_draw_text_right",
         [&](const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (!fontOk) return;
+            if (!fontOk)
+                return;
             auto t = makeText(s, sz, r, g, b);
             const auto lb = t.getLocalBounds();
             t.setPosition(x - lb.width, y);
@@ -107,24 +113,29 @@ int main() {
         });
 
     luaEngine.registerFunction("cpp_draw_rect",
-        [&](float x, float y, float w, float h, int r, int g, int b, int a) {
-            sf::RectangleShape rect({w, h});
-            rect.setPosition(x, y);
-            rect.setFillColor(sf::Color(r, g, b, static_cast<sf::Uint8>(a)));
-            window.draw(rect);
-        });
+                               [&](float x, float y, float w, float h, int r, int g, int b, int a) {
+                                   sf::RectangleShape rect({w, h});
+                                   rect.setPosition(x, y);
+                                   rect.setFillColor(sf::Color(r, g, b, static_cast<sf::Uint8>(a)));
+                                   window.draw(rect);
+                               });
 
     luaEngine.registerFunction("cpp_set_obj_color",
-        [&model](const std::string& id, int r, int g, int b, int a) {
-            if (auto obj = model.getObject(id))
-                obj->setColor(sf::Color(r, g, b, static_cast<sf::Uint8>(a)));
-        });
+                               [&model](const std::string& id, int r, int g, int b, int a) {
+                                   if (auto obj = model.getObject(id))
+                                       obj->setColor(sf::Color(r, g, b, static_cast<sf::Uint8>(a)));
+                               });
 
-    luaEngine.registerFunction("cpp_set_obj_texture",
+    luaEngine.registerFunction(
+        "cpp_set_obj_texture",
         [&model, &textures, &loadedIds](const std::string& objId, const std::string& path) {
             auto obj = model.getObject(objId);
-            if (!obj) return;
-            if (!loadedIds.count(path)) { textures.load(path, path); loadedIds.insert(path); }
+            if (!obj)
+                return;
+            if (!loadedIds.count(path)) {
+                textures.load(path, path);
+                loadedIds.insert(path);
+            }
             obj->setTexture(textures.get(path).get());
         });
 
@@ -148,7 +159,10 @@ int main() {
     model.forEachDepthFirst([&](const std::shared_ptr<GameObject>& obj) {
         const std::string& tf = obj->getTextureFile();
         if (!tf.empty()) {
-            if (!loadedIds.count(tf)) { textures.load(tf, tf); loadedIds.insert(tf); }
+            if (!loadedIds.count(tf)) {
+                textures.load(tf, tf);
+                loadedIds.insert(tf);
+            }
             obj->setTexture(textures.get(tf).get());
         } else {
             obj->setTexture(baseTex.get());
@@ -164,28 +178,28 @@ int main() {
     // ======= Drag state =======
     std::shared_ptr<GameObject> draggedObj;
     sf::Vector2f dragOffset;
-    bool  wasDragging = false;
-    float chipHalfW   = 0.f;
-    float chipHalfH   = 0.f;
+    bool wasDragging = false;
+    float chipHalfW = 0.f;
+    float chipHalfH = 0.f;
 
     sf::Clock clock;
 
-    //  Main loop 
+    //  Main loop
     while (window.isOpen()) {
         const float dt = clock.restart().asSeconds();
 
         std::vector<std::shared_ptr<GameObject>> allObjects;
-        model.forEachDepthFirst([&](const std::shared_ptr<GameObject>& obj) {
-            allObjects.push_back(obj);
-        });
+        model.forEachDepthFirst(
+            [&](const std::shared_ptr<GameObject>& obj) { allObjects.push_back(obj); });
 
         // Events — drag-and-drop stays in C++ (SFML-specific)
         sf::Event event{};
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
+            if (event.type == sf::Event::Closed)
+                window.close();
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-            if (event.type == sf::Event::KeyPressed &&
-                event.key.code == sf::Keyboard::Escape) window.close();
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
+                window.close();
 
             if (event.type == sf::Event::MouseButtonPressed &&
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
@@ -194,11 +208,11 @@ int main() {
                 const auto wp = view.screenToWorld({event.mouseButton.x, event.mouseButton.y});
                 auto picked = view.pickObject(wp, allObjects);
                 if (picked && picked->isDraggable()) {
-                    draggedObj  = picked;
-                    dragOffset  = picked->getPosition() - wp;
+                    draggedObj = picked;
+                    dragOffset = picked->getPosition() - wp;
                     wasDragging = false;
                     const auto b = picked->getGlobalBounds();
-                    chipHalfW = b.width  / 2.f;
+                    chipHalfW = b.width / 2.f;
                     chipHalfH = b.height / 2.f;
                 } else if (picked) {
                     luaEngine.fireEvent("on_click", picked.get());
@@ -210,10 +224,12 @@ int main() {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
                 const auto wp = view.screenToWorld({event.mouseMove.x, event.mouseMove.y});
                 sf::Vector2f newPos = wp + dragOffset;
-                newPos.x = std::clamp(newPos.x, fieldBounds.left + chipHalfW,
-                                      fieldBounds.left + fieldBounds.width  - chipHalfW);
-                newPos.y = std::clamp(newPos.y, fieldBounds.top  + chipHalfH,
-                                      fieldBounds.top  + fieldBounds.height - chipHalfH);
+                newPos.x = std::clamp(newPos.x,
+                                      fieldBounds.left + chipHalfW,
+                                      fieldBounds.left + fieldBounds.width - chipHalfW);
+                newPos.y = std::clamp(newPos.y,
+                                      fieldBounds.top + chipHalfH,
+                                      fieldBounds.top + fieldBounds.height - chipHalfH);
                 draggedObj->setPosition(newPos.x, newPos.y);
                 luaEngine.fireEvent("on_move", draggedObj.get());
                 wasDragging = true;

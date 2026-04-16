@@ -49,7 +49,8 @@ void LuaScriptEngine::registerGameObjectType() {
 
 void LuaScriptEngine::registerEngineTable() {
     sol::table engine = lua_.create_named_table("engine");
-    engine.set_function("on",
+    engine.set_function(
+        "on",
         [this](const std::string& obj_id, const std::string& event, sol::protected_function fn) {
             inlineCallbacks_[obj_id][event] = std::move(fn);
         });
@@ -141,7 +142,9 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
             if (!result.valid()) {
                 sol::error err = result;
                 spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
-                              event_name, obj->getId(), err.what());
+                              event_name,
+                              obj->getId(),
+                              err.what());
             }
             fired = true;
         }

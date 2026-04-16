@@ -13,6 +13,7 @@ extern "C" {
 #include <lualib.h>
 }
 #include <sol/sol.hpp>
+
 #include <spdlog/spdlog.h>
 
 namespace dice::core {
@@ -47,17 +48,16 @@ public:
 
     void registerCallback(const std::string& name, UiCallback callback);
 
-    template<typename Func>
-    void registerFunction(const std::string& name, Func&& func) {
+    template <typename Func> void registerFunction(const std::string& name, Func&& func) {
         lua_.set_function(name, std::forward<Func>(func));
     }
 
     bool executeGlobalScript(const std::filesystem::path& path);
 
-    template<typename... Args>
-    void callGlobal(const std::string& name, Args&&... args) {
+    template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
         sol::protected_function fn = lua_[name];
-        if (!fn.valid()) return;
+        if (!fn.valid())
+            return;
         auto result = fn(std::forward<Args>(args)...);
         if (!result.valid()) {
             sol::error err = result;
@@ -69,8 +69,8 @@ private:
     sol::state lua_;
     std::unordered_map<std::string, std::unique_ptr<LuaScript>> scriptRegistry_;
     std::unordered_map<std::string, UiCallback> callbacks_;
-    std::unordered_map<std::string,
-        std::unordered_map<std::string, sol::protected_function>> inlineCallbacks_;
+    std::unordered_map<std::string, std::unordered_map<std::string, sol::protected_function>>
+        inlineCallbacks_;
 
     void initLibraries();
     void registerGameObjectType();
