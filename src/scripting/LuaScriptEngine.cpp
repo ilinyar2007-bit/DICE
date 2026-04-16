@@ -13,6 +13,7 @@ LuaScriptEngine::LuaScriptEngine() {
     initLibraries();
     registerGameObjectType();
     registerStandardCallbacks();
+    registerEngineTable();
 }
 
 void LuaScriptEngine::initLibraries() {
@@ -43,6 +44,14 @@ void LuaScriptEngine::registerGameObjectType() {
         "getIntProperty",
         [](const dice::core::GameObject& obj, const std::string& key, int def) {
             return obj.getProperty<int>(key, def);
+        });
+}
+
+void LuaScriptEngine::registerEngineTable() {
+    sol::table engine = lua_.create_named_table("engine");
+    engine.set_function("on",
+        [this](const std::string& obj_id, const std::string& event, sol::protected_function fn) {
+            inlineCallbacks_[obj_id][event] = std::move(fn);
         });
 }
 
@@ -96,7 +105,7 @@ bool LuaScriptEngine::attachScript(dice::core::GameObject& obj, bool force_reloa
         return false;
     }
 
-    if (!force_reload && scriptRegistry_.contains(id)) {
+    if (!force_reload && scriptRegistry_.count(id)) {
         return true;
     }
 
@@ -117,11 +126,39 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
     if (obj == nullptr) {
         return false;
     }
-    auto it = scriptRegistry_.find(obj->getId());
-    if (it == scriptRegistry_.end()) {
+    bool fired = false;
+
+    auto sit = scriptRegistry_.find(obj->getId());
+    if (sit != scriptRegistry_.end()) {
+        fired |= sit->second->trigger(event_name, obj);
+    }
+
+    auto cit = inlineCallbacks_.find(obj->getId());
+    if (cit != inlineCallbacks_.end()) {
+        auto eit = cit->second.find(event_name);
+        if (eit != cit->second.end()) {
+            auto result = eit->second(obj);
+            if (!result.valid()) {
+                sol::error err = result;
+                spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
+                              event_name, obj->getId(), err.what());
+            }
+            fired = true;
+        }
+    }
+
+    return fired;
+}
+
+bool LuaScriptEngine::executeGlobalScript(const std::filesystem::path& path) {
+    auto result = lua_.script_file(path.string(), sol::script_pass_on_error);
+    if (!result.valid()) {
+        sol::error err = result;
+        spdlog::error("LuaScriptEngine: global script error '{}': {}", path.string(), err.what());
         return false;
     }
-    return it->second->trigger(event_name, obj);
+    spdlog::debug("LuaScriptEngine: executed global script '{}'", path.string());
+    return true;
 }
 
 void LuaScriptEngine::detachScript(const std::string& object_id) {

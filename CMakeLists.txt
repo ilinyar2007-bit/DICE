@@ -173,6 +173,16 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
 )
 
+set(RESOURCE_DIRS assets scripts scenes)
+
+foreach(dir IN LISTS RESOURCE_DIRS)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/${dir}
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>/${dir}
+  )
+endforeach()
+
 # ----------------------------
 # Tests
 # ----------------------------

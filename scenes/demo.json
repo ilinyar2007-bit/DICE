@@ -67,8 +67,7 @@
       "zOrder": 5,
       "active": true,
       "visible": true,
-      "draggable": false,
-      "luaScript": "scripts/end_turn_btn.lua"
+      "draggable": false
     }
   ]
 }

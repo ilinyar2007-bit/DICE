@@ -1,10 +1,10 @@
 -- Unified dice handler.
 -- Each die stores its player number in properties: {"player": N}
--- cpp_roll_dice(player) is registered from C++ and returns the rolled value.
+-- game.roll() is defined in scripts/game.lua (loaded as global).
 
 function on_click(self)
     local player = self:getIntProperty("player", 0)
-    cpp_roll_dice(player)
+    game.roll(player)
 end
 
 function on_move(self)
