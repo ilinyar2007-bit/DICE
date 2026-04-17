@@ -9,12 +9,12 @@
 ![GitHub issues](https://img.shields.io/github/issues/qx1ls-dr/DICE?style=for-the-badge)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/qx1ls-dr/DICE?style=for-the-badge)
 
-![CI](https://img.shields.io/github/actions/workflow/status/qx1ls-dr/DICE/ci-checks.yml?style=for-the-badge)
-![Build](https://img.shields.io/github/actions/workflow/status/qx1ls-dr/DICE/cmake-single-platform.yml?style=for-the-badge)
-![CodeQL](https://img.shields.io/github/actions/workflow/status/qx1ls-dr/DICE/codeql.yml?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/qx1ls-dr/DICE/ci-checks.yml?style=for-the-badge&logo=githubactions&label=CI)
+![Build](https://img.shields.io/github/actions/workflow/status/qx1ls-dr/DICE/cmake-single-platform.yml?style=for-the-badge&logo=cmake&label=Build)
+![CodeQL](https://img.shields.io/github/actions/workflow/status/qx1ls-dr/DICE/codeql.yml?style=for-the-badge&logo=github&label=CodeQL)
 
-[![CodeFactor](https://img.shields.io/codefactor/grade/github/qx1ls-dr/DICE?style=for-the-badge)](https://www.codefactor.io/repository/github/qx1ls-dr/DICE)
-[![Codacy Badge](https://img.shields.io/codacy/grade/DICE?style=for-the-badge)](https://app.codacy.com/gh/qx1ls-dr/DICE)
+[![CodeFactor](https://img.shields.io/codefactor/grade/github/qx1ls-dr/DICE?style=for-the-badge&logo=codefactor&label=CodeFactor)](https://www.codefactor.io/repository/github/qx1ls-dr/DICE)
+[![Codacy](https://img.shields.io/codacy/grade/559064a8fb4647dd8b1f79953c96a07c?style=for-the-badge&logo=codacy&label=Codacy)](https://app.codacy.com/gh/qx1ls-dr/DICE/dashboard)
 
 
 <br />
@@ -37,19 +37,9 @@
 
 DICE - это комплексный инструмент разработки настольных 2D-игр, написанный на С++. Система строится на принципе отделения игровой логики от графического представления, что позволяет пользователю создавать новые игры через конфигурационные файлы без пересборки всего приложения.
 
-## MVP
-
-- Загрузка 2D-сцены из JSON.
-- Рендеринг слоев.
-- Перетаскивание одной фишки мышью.
-- Ограничение перемещения фишки границами поля
-- Базовая система триггеров для простейших игр.
-- Взаимодействие с 2D компонентами: бросок кубика, перемещение фише
-
-
 ### Зависимости
 
-В нашем проекте использовались:
+В нашем проекте используются:
 
 
 [![SFML](https://img.shields.io/badge/SFML-Game%20Framework-8CC445?style=for-the-badge&logo=cplusplus)](https://www.sfml-dev.org/documentation/)
@@ -63,7 +53,7 @@ DICE - это комплексный инструмент разработки �
 [![sol2](https://img.shields.io/badge/sol2-Lua%20Bindings-000000?style=for-the-badge&logo=lua)](https://sol2.readthedocs.io/)
 
 
-## Установка
+## Установка на Linux
 
 1. Склонируйте репозиторий
    ```sh
@@ -79,14 +69,6 @@ DICE - это комплексный инструмент разработки �
    ```sh
     ./dice
    ```
-
-## Скриншоты и демо-видео
-
-_TODO_
-
-## Создание объектов, скриптов и т.д.
-
-_TODO_
 
 ## Лицензия
 
