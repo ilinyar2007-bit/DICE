@@ -23,16 +23,23 @@ void LuaScriptEngine::initLibraries() {
 void LuaScriptEngine::registerGameObjectType() {
     lua_.new_usertype<dice::core::GameObject>(
         "GameObject",
+        // позиция
         "getX",
-        [](const dice::core::GameObject& obj) { return obj.getPosition().x; },
+        [](const dice::core::GameObject& o) { return o.getPosition().x; },
         "getY",
-        [](const dice::core::GameObject& obj) { return obj.getPosition().y; },
+        [](const dice::core::GameObject& o) { return o.getPosition().y; },
         "setPosition",
-        [](dice::core::GameObject& obj, float x, float y) { obj.setPosition(x, y); },
+        [](dice::core::GameObject& o, float x, float y) { o.setPosition(x, y); },
+        // идентификация
+        "getId",
+        &dice::core::GameObject::getId,
         "getName",
         &dice::core::GameObject::getName,
         "setName",
         &dice::core::GameObject::setName,
+        "getType",
+        &dice::core::GameObject::getType,
+        // состояние
         "isActive",
         &dice::core::GameObject::isActive,
         "setActive",
@@ -41,9 +48,44 @@ void LuaScriptEngine::registerGameObjectType() {
         &dice::core::GameObject::isVisible,
         "setVisible",
         &dice::core::GameObject::setVisible,
+        // z-порядок
+        "getZOrder",
+        &dice::core::GameObject::getZOrder,
+        "setZOrder",
+        &dice::core::GameObject::setZOrder,
+        // трансформации (sf::Transformable)
+        "getRotation",
+        [](const dice::core::GameObject& o) { return o.getRotation(); },
+        "setRotation",
+        [](dice::core::GameObject& o, float a) { o.setRotation(a); },
+        "getScaleX",
+        [](const dice::core::GameObject& o) { return o.getScale().x; },
+        "getScaleY",
+        [](const dice::core::GameObject& o) { return o.getScale().y; },
+        "setScale",
+        [](dice::core::GameObject& o, float x, float y) { o.setScale(x, y); },
+        // свойства
         "getIntProperty",
-        [](const dice::core::GameObject& obj, const std::string& key, int def) {
-            return obj.getProperty<int>(key, def);
+        [](const dice::core::GameObject& o, const std::string& k, int d) {
+            return o.getProperty<int>(k, d);
+        },
+        "getFloatProperty",
+        [](const dice::core::GameObject& o, const std::string& k, float d) {
+            return o.getProperty<float>(k, d);
+        },
+        "getStringProperty",
+        [](const dice::core::GameObject& o, const std::string& k, const std::string& d) {
+            return o.getProperty<std::string>(k, d);
+        },
+        "getBoolProperty",
+        [](const dice::core::GameObject& o, const std::string& k, bool d) {
+            return o.getProperty<bool>(k, d);
+        },
+        "setIntProperty",
+        [](dice::core::GameObject& o, const std::string& k, int v) { o.setProperty<int>(k, v); },
+        "setStringProperty",
+        [](dice::core::GameObject& o, const std::string& k, const std::string& v) {
+            o.setProperty<std::string>(k, v);
         });
 }
 
@@ -106,7 +148,7 @@ bool LuaScriptEngine::attachScript(dice::core::GameObject& obj, bool force_reloa
         return false;
     }
 
-    if (!force_reload && scriptRegistry_.count(id)) {
+    if (!force_reload && scriptRegistry_.contains(id)) {
         return true;
     }
 
@@ -140,7 +182,7 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
         if (eit != cit->second.end()) {
             auto result = eit->second(obj);
             if (!result.valid()) {
-                sol::error err = result;
+                const sol::error err = result;
                 spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
                               event_name,
                               obj->getId(),
@@ -156,7 +198,7 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
 bool LuaScriptEngine::executeGlobalScript(const std::filesystem::path& path) {
     auto result = lua_.script_file(path.string(), sol::script_pass_on_error);
     if (!result.valid()) {
-        sol::error err = result;
+        const sol::error err = result;
         spdlog::error("LuaScriptEngine: global script error '{}': {}", path.string(), err.what());
         return false;
     }

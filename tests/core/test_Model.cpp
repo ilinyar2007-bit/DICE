@@ -88,8 +88,9 @@ TEST(ModelCleanTest, RemoveChildDetachesFromParentAndIndex) {
 
     bool stillInChildren = false;
     for (const auto& ch : parent->getChildren()) {
-        if (ch && ch->getId() == "child")
+        if (ch && ch->getId() == "child") {
             stillInChildren = true;
+        }
     }
     EXPECT_FALSE(stillInChildren);
 }
@@ -134,11 +135,12 @@ TEST(ModelCleanTest, ForEachDepthFirstVisitsAllObjects) {
 TEST(ModelJsonFactoryTest, CreatesCorrectDerivedTypesFromJson) {
     Model model(dice::scene::makeDefaultFactory());
 
-    nlohmann::json j = {{"objects",
-                         nlohmann::json::array(
-                             {{{"type", "Chip"}, {"id", "chip_test"}, {"name", "TestChip"}},
-                              {{"type", "Card"}, {"id", "card_test"}, {"name", "TestCard"}},
-                              {{"type", "GameObject"}, {"id", "obj_test"}, {"name", "TestObj"}}})}};
+    const nlohmann::json j = {
+        {"objects",
+         nlohmann::json::array(
+             {{{"type", "Chip"}, {"id", "chip_test"}, {"name", "TestChip"}},
+              {{"type", "Card"}, {"id", "card_test"}, {"name", "TestCard"}},
+              {{"type", "GameObject"}, {"id", "obj_test"}, {"name", "TestObj"}}})}};
 
     model.fromJson(j);
 
@@ -156,20 +158,21 @@ TEST(ModelJsonFactoryTest, CreatesCorrectDerivedTypesFromJson) {
     EXPECT_EQ(dynamic_cast<dice::components::Card*>(obj.get()), nullptr);
 }
 
-TEST(ModelJsonFactoryTest, LoadsChildrenRecursively) {
-    Model model(dice::scene::makeDefaultFactory());
+static nlohmann::json makeChildrenTestJson() {
+    const nlohmann::json chipJson = {{"type", "Chip"}, {"id", "chip_1"}, {"name", "RedChip"}};
+    const nlohmann::json cardJson = {{"type", "Card"}, {"id", "card_1"}, {"name", "AceOfSpades"}};
+    const nlohmann::json tableJson = {{"type", "GameObject"},
+                                      {"id", "table"},
+                                      {"name", "MainTable"},
+                                      {"children", nlohmann::json::array({chipJson, cardJson})}};
+    const nlohmann::json chipRootJson = {
+        {"type", "Chip"}, {"id", "chip_root"}, {"name", "BlueChip"}};
+    return {{"objects", nlohmann::json::array({tableJson, chipRootJson})}};
+}
 
-    nlohmann::json j = {
-        {"objects",
-         nlohmann::json::array(
-             {{{"type", "GameObject"},
-               {"id", "table"},
-               {"name", "MainTable"},
-               {"children",
-                nlohmann::json::array(
-                    {{{"type", "Chip"}, {"id", "chip_1"}, {"name", "RedChip"}},
-                     {{"type", "Card"}, {"id", "card_1"}, {"name", "AceOfSpades"}}})}},
-              {{"type", "Chip"}, {"id", "chip_root"}, {"name", "BlueChip"}}})}};
+TEST(ModelJsonFactoryTest, LoadsChildrenRecursively_ObjectsRegistered) {
+    Model model(dice::scene::makeDefaultFactory());
+    const nlohmann::json j = makeChildrenTestJson();
 
     model.fromJson(j);
 
@@ -180,18 +183,31 @@ TEST(ModelJsonFactoryTest, LoadsChildrenRecursively) {
 
     EXPECT_NE(dynamic_cast<dice::components::Chip*>(model.getObject("chip_1").get()), nullptr);
     EXPECT_NE(dynamic_cast<dice::components::Card*>(model.getObject("card_1").get()), nullptr);
+}
 
-    auto table = model.getObject("table");
-    bool hasChip1 = false, hasCard1 = false;
+static void checkChildrenHierarchy(const std::shared_ptr<GameObject>& table) {
+    bool hasChip1 = false;
+    bool hasCard1 = false;
     for (const auto& ch : table->getChildren()) {
-        if (!ch)
+        if (!ch) {
             continue;
+        }
         hasChip1 |= (ch->getId() == "chip_1");
         hasCard1 |= (ch->getId() == "card_1");
         EXPECT_EQ(ch->getParent(), table.get());
     }
     EXPECT_TRUE(hasChip1);
     EXPECT_TRUE(hasCard1);
+}
+
+TEST(ModelJsonFactoryTest, LoadsChildrenRecursively_HierarchyCorrect) {
+    Model model(dice::scene::makeDefaultFactory());
+    const nlohmann::json j = makeChildrenTestJson();
+
+    model.fromJson(j);
+
+    ASSERT_NE(model.getObject("table"), nullptr);
+    checkChildrenHierarchy(model.getObject("table"));
 }
 
 TEST(ModelCleanTest, ToJsonContainsObjectsArray) {
@@ -204,7 +220,7 @@ TEST(ModelCleanTest, ToJsonContainsObjectsArray) {
     auto j = model.toJson();
     ASSERT_TRUE(j.contains("objects"));
     ASSERT_TRUE(j["objects"].is_array());
-    ASSERT_EQ(j["objects"].size(), 1u);
+    ASSERT_EQ(j["objects"].size(), 1U);
 }
 
 TEST(ModelCleanTest, ClearEmptiesRootsAndIndex) {

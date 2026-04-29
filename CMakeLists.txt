@@ -153,6 +153,23 @@ else()
 endif()
 
 # ----------------------------
+# Controller library
+# ----------------------------
+add_library(dice_controller STATIC
+  src/controller/Controller.cpp
+)
+
+target_include_directories(dice_controller
+  PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(dice_controller
+  PUBLIC
+    dice_scripting
+)
+
+# ----------------------------
 # Application
 # ----------------------------
 add_executable(${PROJECT_NAME}
@@ -166,7 +183,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
-    dice_scripting
+    dice_controller
     sfml-network
     imgui_lib
     spdlog::spdlog

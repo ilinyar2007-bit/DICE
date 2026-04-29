@@ -5,31 +5,36 @@
 #include "core/GameObject.hpp"
 #include <gtest/gtest.h>
 
-using namespace dice::core;
+using dice::core::GameObject;
 
 class GameObjectTest : public ::testing::Test {
 protected:
     void SetUp() override {
         texture_.create(64, 64);
 
-        sf::Uint8* pixels = new sf::Uint8[64 * 64 * 4];
-        for (int i = 0; i < 64 * 64 * 4; i += 4) {
+        std::vector<sf::Uint8> pixels(64UL * 64 * 4);
+        for (std::size_t i = 0; i < pixels.size(); i += 4) {
             pixels[i] = 255;
             pixels[i + 1] = 0;
             pixels[i + 2] = 0;
             pixels[i + 3] = 255;
         }
-        texture_.update(pixels);
-        delete[] pixels;
+        texture_.update(pixels.data());
     }
 
+private:
     sf::Texture texture_;
+
+protected:
+    sf::Texture& getTexture() {
+        return texture_;
+    }
 };
 
 // ========== Constructor tests ==========
 
 TEST_F(GameObjectTest, DefaultConstructor) {
-    GameObject obj;
+    const GameObject obj;
 
     EXPECT_EQ(obj.getId(), "");
     EXPECT_EQ(obj.getName(), "Unnamed");
@@ -41,7 +46,7 @@ TEST_F(GameObjectTest, DefaultConstructor) {
 }
 
 TEST_F(GameObjectTest, ParameterizedConstructor) {
-    GameObject obj("chip_1", "Red Chip");
+    const GameObject obj("chip_1", "Red Chip");
 
     EXPECT_EQ(obj.getId(), "chip_1");
     EXPECT_EQ(obj.getName(), "Red Chip");
@@ -75,14 +80,14 @@ TEST_F(GameObjectTest, TagManagement) {
     EXPECT_FALSE(obj.hasTag("nonexistent"));
 
     auto tags = obj.getTags();
-    EXPECT_EQ(tags.size(), 2);
+    EXPECT_EQ(tags.size(), 2U);
 
     obj.removeTag("player1");
     EXPECT_FALSE(obj.hasTag("player1"));
     EXPECT_TRUE(obj.hasTag("movable"));
 
     obj.addTag("movable");
-    EXPECT_EQ(obj.getTags().size(), 1);
+    EXPECT_EQ(obj.getTags().size(), 1U);
 }
 
 // ========== Visual representation tests ==========
@@ -90,8 +95,8 @@ TEST_F(GameObjectTest, TagManagement) {
 TEST_F(GameObjectTest, TextureAndColor) {
     GameObject obj;
 
-    obj.setTexture(&texture_);
-    EXPECT_EQ(obj.getSprite().getTexture(), &texture_);
+    obj.setTexture(&getTexture());
+    EXPECT_EQ(obj.getSprite().getTexture(), &getTexture());
 
     obj.setColor(sf::Color::Blue);
     EXPECT_EQ(obj.getColor(), sf::Color::Blue);
@@ -115,48 +120,49 @@ TEST_F(GameObjectTest, ZOrderManagement) {
 
 TEST_F(GameObjectTest, Transformations) {
     GameObject obj;
-    obj.setTexture(&texture_);
+    obj.setTexture(&getTexture());
 
-    obj.setPosition(100.f, 200.f);
+    obj.setPosition(100.F, 200.F);
     auto pos = obj.getPosition();
-    EXPECT_FLOAT_EQ(pos.x, 100.f);
-    EXPECT_FLOAT_EQ(pos.y, 200.f);
+    EXPECT_FLOAT_EQ(pos.x, 100.F);
+    EXPECT_FLOAT_EQ(pos.y, 200.F);
 
-    obj.setRotation(45.f);
-    EXPECT_FLOAT_EQ(obj.getRotation(), 45.f);
+    obj.setRotation(45.F);
+    EXPECT_FLOAT_EQ(obj.getRotation(), 45.F);
 
-    obj.setScale(2.f, 2.f);
+    obj.setScale(2.F, 2.F);
     auto scale = obj.getScale();
-    EXPECT_FLOAT_EQ(scale.x, 2.f);
-    EXPECT_FLOAT_EQ(scale.y, 2.f);
+    EXPECT_FLOAT_EQ(scale.x, 2.F);
+    EXPECT_FLOAT_EQ(scale.y, 2.F);
 }
 
 // ========== Collision tests ==========
 
 TEST_F(GameObjectTest, BoundsAndContains) {
     GameObject obj;
-    obj.setTexture(&texture_);
-    obj.setPosition(100.f, 100.f);
+    obj.setTexture(&getTexture());
+    obj.setPosition(100.F, 100.F);
 
     auto bounds = obj.getGlobalBounds();
-    EXPECT_GT(bounds.width, 0.f);
-    EXPECT_GT(bounds.height, 0.f);
+    EXPECT_GT(bounds.width, 0.F);
+    EXPECT_GT(bounds.height, 0.F);
 
-    EXPECT_TRUE(obj.contains(sf::Vector2f(100.f, 100.f)));
-    EXPECT_FALSE(obj.contains(sf::Vector2f(1000.f, 1000.f)));
+    EXPECT_TRUE(obj.contains(sf::Vector2f(100.F, 100.F)));
+    EXPECT_FALSE(obj.contains(sf::Vector2f(1000.F, 1000.F)));
 }
 
 TEST_F(GameObjectTest, Intersection) {
-    GameObject obj1, obj2;
-    obj1.setTexture(&texture_);
-    obj2.setTexture(&texture_);
+    GameObject obj1;
+    GameObject obj2;
+    obj1.setTexture(&getTexture());
+    obj2.setTexture(&getTexture());
 
-    obj1.setPosition(100.f, 100.f);
-    obj2.setPosition(200.f, 200.f);
+    obj1.setPosition(100.F, 100.F);
+    obj2.setPosition(200.F, 200.F);
 
     EXPECT_FALSE(obj1.intersects(obj2));
 
-    obj2.setPosition(110.f, 110.f);
+    obj2.setPosition(110.F, 110.F);
 
     EXPECT_TRUE(obj1.intersects(obj2));
 }
@@ -171,7 +177,7 @@ TEST_F(GameObjectTest, ParentChildRelationship) {
     parent->addChild(child1);
     parent->addChild(child2);
 
-    EXPECT_EQ(parent->getChildren().size(), 2);
+    EXPECT_EQ(parent->getChildren().size(), 2U);
     EXPECT_EQ(child1->getParent(), parent.get());
     EXPECT_EQ(child2->getParent(), parent.get());
 
@@ -180,7 +186,7 @@ TEST_F(GameObjectTest, ParentChildRelationship) {
     EXPECT_EQ(retrieved->getId(), "child1");
 
     parent->removeChild("child1");
-    EXPECT_EQ(parent->getChildren().size(), 1);
+    EXPECT_EQ(parent->getChildren().size(), 1U);
     EXPECT_EQ(child1->getParent(), nullptr);
 }
 
@@ -240,8 +246,8 @@ TEST_F(GameObjectTest, JsonSerialization) {
     original.setDescription("A red playing chip");
     original.addTag("player1");
     original.addTag("movable");
-    original.setPosition(100.f, 200.f);
-    original.setRotation(45.f);
+    original.setPosition(100.F, 200.F);
+    original.setRotation(45.F);
     original.setZOrder(5);
     original.setProperty("value", 10);
     original.setLuaScript("scripts/chip.lua");
@@ -263,9 +269,9 @@ TEST_F(GameObjectTest, JsonSerialization) {
     EXPECT_EQ(loaded.getDescription(), "A red playing chip");
     EXPECT_TRUE(loaded.hasTag("player1"));
     EXPECT_TRUE(loaded.hasTag("movable"));
-    EXPECT_FLOAT_EQ(loaded.getPosition().x, 100.f);
-    EXPECT_FLOAT_EQ(loaded.getPosition().y, 200.f);
-    EXPECT_FLOAT_EQ(loaded.getRotation(), 45.f);
+    EXPECT_FLOAT_EQ(loaded.getPosition().x, 100.F);
+    EXPECT_FLOAT_EQ(loaded.getPosition().y, 200.F);
+    EXPECT_FLOAT_EQ(loaded.getRotation(), 45.F);
     EXPECT_EQ(loaded.getZOrder(), 5);
     EXPECT_EQ(loaded.getProperty<int>("value"), 10);
     EXPECT_EQ(loaded.getLuaScript(), "scripts/chip.lua");
@@ -275,27 +281,27 @@ TEST_F(GameObjectTest, JsonWithChildren) {
     auto parent = std::make_shared<GameObject>("parent", "Parent");
     auto child = std::make_shared<GameObject>("child", "Child");
 
-    child->setPosition(10.f, 20.f);
+    child->setPosition(10.F, 20.F);
     parent->addChild(child);
 
 
     nlohmann::json json = parent->toJson();
 
     EXPECT_TRUE(json.contains("children"));
-    EXPECT_EQ(json["children"].size(), 1);
+    EXPECT_EQ(json["children"].size(), 1U);
     EXPECT_EQ(json["children"][0]["id"], "child");
 }
 
 TEST_F(GameObjectTest, SaveAndLoadFromFile) {
     GameObject original("test_obj", "Test Object");
     original.setType("test");
-    original.setPosition(50.f, 75.f);
+    original.setPosition(50.F, 75.F);
     original.setProperty("score", 100);
 
-    std::string filename = "/tmp/test_gameobject.json";
+    const std::string filename = "/tmp/test_gameobject.json";
     {
         std::ofstream file(filename);
-        nlohmann::json json = original.toJson();
+        const nlohmann::json json = original.toJson();
         file << json.dump(2);
     }
 
@@ -325,7 +331,7 @@ TEST_F(GameObjectTest, UpdateWithChildren) {
     parent->addChild(activeChild);
     parent->addChild(inactiveChild);
 
-    parent->update(0.016f);
+    parent->update(0.016F);
 
     EXPECT_TRUE(parent->isActive());
 }
