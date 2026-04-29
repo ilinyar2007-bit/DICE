@@ -15,7 +15,7 @@ class GameObject : public sf::Drawable, public sf::Transformable {
 public:
     GameObject();
 
-    GameObject(const std::string& id, const std::string& name);
+    GameObject(std::string id, std::string name);
 
     virtual ~GameObject() = default;
 
@@ -118,9 +118,9 @@ public:
 
     void addChild(std::shared_ptr<GameObject> child);
 
-    void removeChild(const std::string& childId);
+    void removeChild(const std::string& child_id);
 
-    std::shared_ptr<GameObject> getChild(const std::string& childId);
+    std::shared_ptr<GameObject> getChild(const std::string& child_id);
 
     const std::vector<std::shared_ptr<GameObject>>& getChildren() const {
         return children_;
@@ -189,7 +189,7 @@ public:
 
     // ========== Updating and rendering ==========
 
-    virtual void update(float deltaTime);
+    virtual void update(float delta_time);
 
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 

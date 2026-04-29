@@ -158,7 +158,8 @@ TEST(ModelJsonFactoryTest, CreatesCorrectDerivedTypesFromJson) {
     EXPECT_EQ(dynamic_cast<dice::components::Card*>(obj.get()), nullptr);
 }
 
-static nlohmann::json makeChildrenTestJson() {
+namespace {
+nlohmann::json makeChildrenTestJson() {
     const nlohmann::json chipJson = {{"type", "Chip"}, {"id", "chip_1"}, {"name", "RedChip"}};
     const nlohmann::json cardJson = {{"type", "Card"}, {"id", "card_1"}, {"name", "AceOfSpades"}};
     const nlohmann::json tableJson = {{"type", "GameObject"},
@@ -185,7 +186,7 @@ TEST(ModelJsonFactoryTest, LoadsChildrenRecursively_ObjectsRegistered) {
     EXPECT_NE(dynamic_cast<dice::components::Card*>(model.getObject("card_1").get()), nullptr);
 }
 
-static void checkChildrenHierarchy(const std::shared_ptr<GameObject>& table) {
+void checkChildrenHierarchy(const std::shared_ptr<GameObject>& table) {
     bool hasChip1 = false;
     bool hasCard1 = false;
     for (const auto& ch : table->getChildren()) {
@@ -199,6 +200,7 @@ static void checkChildrenHierarchy(const std::shared_ptr<GameObject>& table) {
     EXPECT_TRUE(hasChip1);
     EXPECT_TRUE(hasCard1);
 }
+} // namespace
 
 TEST(ModelJsonFactoryTest, LoadsChildrenRecursively_HierarchyCorrect) {
     Model model(dice::scene::makeDefaultFactory());
