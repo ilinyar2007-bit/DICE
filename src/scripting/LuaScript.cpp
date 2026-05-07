@@ -34,7 +34,7 @@ bool LuaScript::trigger(const std::string& event_name, dice::core::GameObject* s
         return false;
     }
 
-    sol::optional<sol::function> handler = env_[event_name];
+    sol::optional<sol::protected_function> handler = env_[event_name];
     if (!handler) {
         return false;
     }

@@ -18,6 +18,10 @@ namespace dice::scripting {
 
 inline constexpr const char* kEventOnClick = "on_click";
 inline constexpr const char* kEventOnMove = "on_move";
+inline constexpr const char* kEventOnDragStart = "on_drag_start";
+inline constexpr const char* kEventOnDragEnd = "on_drag_end";
+inline constexpr const char* kEventOnHover = "on_hover";
+inline constexpr const char* kEventOnHoverExit = "on_hover_exit";
 
 class LuaScript {
 public:

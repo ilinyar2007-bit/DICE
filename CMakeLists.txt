@@ -153,6 +153,23 @@ else()
 endif()
 
 # ----------------------------
+# Controller library
+# ----------------------------
+add_library(dice_controller STATIC
+  src/controller/Controller.cpp
+)
+
+target_include_directories(dice_controller
+  PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(dice_controller
+  PUBLIC
+    dice_scripting
+)
+
+# ----------------------------
 # Application
 # ----------------------------
 add_executable(${PROJECT_NAME}
@@ -166,12 +183,22 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
-    dice_scripting
+    dice_controller
     sfml-network
     imgui_lib
     spdlog::spdlog
     nlohmann_json::nlohmann_json
 )
+
+set(RESOURCE_DIRS assets scripts scenes)
+
+foreach(dir IN LISTS RESOURCE_DIRS)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/${dir}
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>/${dir}
+  )
+endforeach()
 
 # ----------------------------
 # Tests
