@@ -1,8 +1,8 @@
-// TODO: validator for catching scene errors
-
 #include "core/Model.hpp"
 
 #include <algorithm>
+
+#include "include/SceneValidator.hpp"
 
 namespace dice::core {
 
@@ -126,6 +126,9 @@ std::shared_ptr<GameObject> Model::makeFromJsonNode(const nlohmann::json& nodeJs
 }
 
 void Model::fromJson(const nlohmann::json& j) {
+    SceneValidator validator;
+    validator.validate(j);
+    // Тут смотреть состояние валидатора и чё та делать
     clear();
     if (!j.contains("objects"))
         return;
