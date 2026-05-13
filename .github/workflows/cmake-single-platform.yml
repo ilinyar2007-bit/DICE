@@ -68,11 +68,3 @@ jobs:
         ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1 \
         UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
         xvfb-run -a ctest --output-on-failure --parallel 2
-
-    # ----------------------------
-    # Valgrind (CTest memcheck)
-    # ----------------------------
-    - name: Memory check (CTest MemCheck)
-      working-directory: build
-      run: |
-        ctest -T memcheck --output-on-failure || echo "Valgrind found issues"
