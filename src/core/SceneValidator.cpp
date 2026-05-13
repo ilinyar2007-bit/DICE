@@ -1,4 +1,4 @@
-#include "SceneValidator.hpp"
+#include "core/SceneValidator.hpp"
 
 #include <filesystem>
 #include <unordered_set>
@@ -7,67 +7,71 @@
 
 namespace dice::core {
 
-void SceneValidator::validate(const nlohmann::json& sceneJson) {
-    errors_.clear();
-    warnings_.clear();
+bool SceneValidator::validate(const nlohmann::json& scene_json) {
+    clear();
 
-    if (!checkSceneRoot(sceneJson)) {
+    checkSceneRoot(scene_json);
+
+    if (hasErrors()) {
         return false;
     }
 
-    checkDuplicateIds(sceneJson);
+    checkDuplicateIds(scene_json);
 
-    for (const auto& obj : sceneJson["objects"]) {
+    for (const auto& obj : scene_json["objects"]) {
         checkObject(obj);
     }
+
+    return !hasErrors();
 }
 
-void SceneValidator::addError(const std::optional<std::string>& objectId,
-                              const std::string& message) {
-    if (objectId.has_value()) {
+void SceneValidator::addError(const MessageCode& code,
+                              const std::string& message,
+                              const nlohmann::json& context_object) {
+    if (context_object.contains("id") && context_object["id"].is_string()) {
         spdlog::error("Message from SceneValidator: <{}>, an object with id {} is involved",
                       message,
-                      objectId.value());
+                      context_object["id"].get<std::string>());
     } else {
         spdlog::error("SceneValidator: '{}'", message);
     }
-    errors_.push_back({objectId, message});
+    errors_.push_back({code, message, context_object});
 }
 
-void SceneValidator::addWarning(const std::optional<std::string>& objectId,
-                                const std::string& message) {
-    if (objectId.has_value()) {
+void SceneValidator::addWarning(const MessageCode& code,
+                                const std::string& message,
+                                const nlohmann::json& context_object) {
+    if (context_object.contains("id") && context_object["id"].is_string()) {
         spdlog::warn("Message from SceneValidator: <{}>, an object with id {} is involved",
                      message,
-                     objectId.value());
+                     context_object["id"].get<std::string>());
     } else {
         spdlog::warn("SceneValidator: '{}'", message);
     }
-    warnings_.push_back({objectId, message});
+    warnings_.push_back({code, message, context_object});
 }
 
-bool SceneValidator::checkSceneRoot(const nlohmann::json& sceneJson) {
-    if (!sceneJson.is_object()) {
-        addError(std::nullopt, "Scene root must be object");
-        return false;
+void SceneValidator::checkSceneRoot(const nlohmann::json& scene_json) {
+    if (!scene_json.is_object()) {
+        addError(
+            MessageCode::E_SCENE_ROOT_IS_NOT_AN_OBJECT, "Scene root must be object", scene_json);
+        return;
     }
 
-    if (!sceneJson.contains("objects")) {
-        addError(std::nullopt, "Missing field: objects");
-        return false;
+    if (!scene_json.contains("objects")) {
+        addError(MessageCode::E_MISSING_OBJECTS_ARRAY, "Missing field: objects", scene_json);
+        return;
     }
 
-    if (!sceneJson["objects"].is_array()) {
-        addError(std::nullopt, "'objects' must be array");
-        return false;
+    if (!scene_json["objects"].is_array()) {
+        addError(MessageCode::E_OBJECTS_IS_NOT_AN_ARRAY, "'objects' must be array", scene_json);
+        return;
     }
-
-    return true;
 }
 
 void SceneValidator::checkObject(const nlohmann::json& obj) {
     if (!obj.is_object()) {
-        addError(std::nullopt, "Object entry must be object");
+        addError(MessageCode::E_OBJECT_ENTRY_IS_NOT_AN_OBJECT, "Object entry must be object", obj);
         return;
     }
 
@@ -84,25 +88,23 @@ void SceneValidator::checkObject(const nlohmann::json& obj) {
 }
 
 void SceneValidator::checkRequiredFields(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (!obj.contains("id")) {
-        addError(id, "Missing field: id");
+        addError(MessageCode::E_MISSING_FIELD_ID, "Missing field: id", obj);
     } else if (!obj["id"].is_string()) {
-        addError(id, "'id' must be string");
+        addError(MessageCode::E_ID_IS_NOT_A_STRING, "'id' must be string", obj);
     }
 
     if (!obj.contains("type")) {
-        addError(id, "Missing field: type");
+        addError(MessageCode::E_MISSING_FIELD_TYPE, "Missing field: type", obj);
     } else if (!obj["type"].is_string()) {
-        addError(id, "'type' must be string");
+        addError(MessageCode::E_TYPE_IS_NOT_A_STRING, "'type' must be string", obj);
     }
 }
 
-void SceneValidator::checkDuplicateIds(const nlohmann::json& sceneJson) {
+void SceneValidator::checkDuplicateIds(const nlohmann::json& scene_json) {
     std::unordered_set<std::string> ids;
 
-    for (const auto& obj : sceneJson["objects"]) {
+    for (const auto& obj : scene_json["objects"]) {
         auto id = tryGetId(obj);
 
         if (!id.has_value()) {
@@ -110,7 +112,7 @@ void SceneValidator::checkDuplicateIds(const nlohmann::json& sceneJson) {
         }
 
         if (ids.contains(id.value())) {
-            addError(id, "Duplicate object id");
+            addError(MessageCode::E_DUPLICATE_ID, "Duplicate object id", obj);
         }
 
         ids.insert(id.value());
@@ -118,149 +120,140 @@ void SceneValidator::checkDuplicateIds(const nlohmann::json& sceneJson) {
 }
 
 void SceneValidator::checkTransform(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (obj.contains("position")) {
         const auto& position = obj["position"];
 
-        if (!position.is_array() || position.size() != 2) {
-            addError(id, "'position' must contain 2 values");
+        if (!position.is_array()) {
+            addError(MessageCode::E_POSITION_IS_NOT_AN_ARRAY, "'position' must be array", obj);
+        } else if (position.size() != 2) {
+            addError(MessageCode::E_POSITION_DOES_NOT_CONTAIN_2_VALUES,
+                     "'position' must contain 2 values",
+                     obj);
         } else if (!isNumber(position[0]) || !isNumber(position[1])) {
-            addError(id, "'position' values must be numeric");
+            addError(MessageCode::E_POSITION_VALUES_ARE_NOT_NUMERIC,
+                     "'position' values must be numeric",
+                     obj);
         }
     }
 
     if (obj.contains("scale")) {
         const auto& scale = obj["scale"];
 
-        if (!scale.is_array() || scale.size() != 2) {
-            addError(id, "'scale' must contain 2 values");
+        if (!scale.is_array()) {
+            addError(MessageCode::E_SCALE_IS_NOT_AN_ARRAY, "'scale' must be array", obj);
+        } else if (scale.size() != 2) {
+            addError(MessageCode::E_SCALE_DOES_NOT_CONTAIN_2_VALUES,
+                     "'scale' must contain 2 values",
+                     obj);
         } else if (!isNumber(scale[0]) || !isNumber(scale[1])) {
-            addError(id, "'scale' values must be numeric");
+            addError(
+                MessageCode::E_SCALE_VALUES_ARE_NOT_NUMERIC, "'scale' values must be numeric", obj);
         }
     }
 
     if (obj.contains("rotation")) {
         if (!isNumber(obj["rotation"])) {
-            addError(id, "'rotation' must be numeric");
+            addError(MessageCode::E_ROTATION_IS_NOT_NUMERIC, "'rotation' must be numeric", obj);
         }
     }
 }
 
 void SceneValidator::checkColor(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (!obj.contains("color")) {
         return;
     }
 
     const auto& color = obj["color"];
 
-    if (!color.is_array() || color.size() != 4) {
-        addError(id, "'color' must contain 4 values");
+    if (!color.is_array()) {
+        addError(MessageCode::E_COLOR_IS_NOT_AN_ARRAY, "'color' must be array", obj);
+        return;
+    } else if (color.size() != 4) {
+        addError(
+            MessageCode::E_COLOR_DOES_NOT_CONTAIN_4_VALUES, "'color' must contain 4 values", obj);
         return;
     }
 
     for (const auto& value : color) {
         if (!value.is_number_integer()) {
-            addError(id, "'color' values must be integers");
+            addError(MessageCode::E_COLOR_VALUES_ARE_NOT_INTEGERS,
+                     "'color' values must be integers",
+                     obj);
             return;
         }
 
         const int channel = value.get<int>();
 
         if (channel < 0 || channel > 255) {
-            addError(id, "'color' values must be in range 0..255");
+            addError(MessageCode::E_COLOR_VALUES_ARE_NOT_IN_RANGE,
+                     "'color' values must be in range 0..255",
+                     obj);
             return;
         }
     }
 }
 
 void SceneValidator::checkTextureFile(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (!obj.contains("textureFile")) {
         return;
     }
 
     if (!obj["textureFile"].is_string()) {
-        addError(id, "'textureFile' must be string");
+        addError(MessageCode::E_TEXTURE_FILE_IS_NOT_A_STRING, "'textureFile' must be string", obj);
         return;
     }
 
     const auto path = obj["textureFile"].get<std::string>();
 
     if (!path.empty() && !std::filesystem::exists(path)) {
-        addWarning(id, "Texture file not found: " + path);
+        addWarning(MessageCode::W_TEXTURE_FILE_NOT_FOUND, "Texture file not found: " + path, obj);
     }
 }
 
 void SceneValidator::checkLuaScript(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (!obj.contains("luaScript")) {
         return;
     }
 
     if (!obj["luaScript"].is_string()) {
-        addError(id, "'luaScript' must be string");
+        addError(MessageCode::E_LUA_SCRIPT_IS_NOT_A_STRING, "'luaScript' must be string", obj);
         return;
     }
 
     const auto path = obj["luaScript"].get<std::string>();
 
     if (!path.empty() && !std::filesystem::exists(path)) {
-        addWarning(id, "Lua script not found: " + path);
+        addWarning(MessageCode::W_LUA_SCRIPT_NOT_FOUND, "Lua script file not found: " + path, obj);
     }
 }
 
 void SceneValidator::checkTags(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (!obj.contains("tags")) {
         return;
     }
 
     if (!obj["tags"].is_array()) {
-        addError(id, "'tags' must be array");
+        addError(MessageCode::E_TAGS_IS_NOT_AN_ARRAY, "'tags' must be array", obj);
         return;
     }
 
     for (const auto& tag : obj["tags"]) {
         if (!tag.is_string()) {
-            addError(id, "'tags' values must be strings");
+            addError(
+                MessageCode::E_TAGS_VALUES_ARE_NOT_STRINGS, "'tags' values must be strings", obj);
             return;
         }
     }
 }
 
 void SceneValidator::checkProperties(const nlohmann::json& obj) {
-    const auto id = tryGetId(obj);
-
     if (!obj.contains("properties")) {
         return;
     }
 
     if (!obj["properties"].is_object()) {
-        addError(id, "'properties' must be object");
+        addError(MessageCode::E_PROPERTIES_IS_NOT_AN_OBJECT, "'properties' must be object", obj);
     }
 }
-
-std::optional<std::string> SceneValidator::tryGetId(const nlohmann::json& obj) const {
-    if (!obj.contains("id")) {
-        return std::nullopt;
-    }
-
-    if (!obj["id"].is_string()) {
-        return std::nullopt;
-    }
-
-    return obj["id"].get<std::string>();
-}
-
-bool SceneValidator::isNumber(const nlohmann::json& value) const {
-    return value.is_number_integer() || value.is_number_unsigned() || value.is_number_float();
-}
-
 
 } // namespace dice::core
