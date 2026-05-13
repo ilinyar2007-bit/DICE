@@ -6,17 +6,19 @@ using dice::core::SceneValidator;
 
 // ========== Helpers ==========
 
-static nlohmann::json makeValidObject(const std::string& id = "obj_1",
-                                      const std::string& type = "GameObject") {
+namespace {
+nlohmann::json makeValidObject(const std::string& id = "obj_1",
+                               const std::string& type = "GameObject") {
     return {{"id", id}, {"type", type}};
 }
 
-static nlohmann::json makeValidScene(nlohmann::json objects = nlohmann::json::array()) {
+nlohmann::json makeValidScene(nlohmann::json objects = nlohmann::json::array()) {
     if (objects.empty()) {
         objects.push_back(makeValidObject());
     }
     return {{"objects", objects}};
 }
+} // namespace
 
 // ========== Scene root checks ==========
 

@@ -1,8 +1,8 @@
+// TODO: validator for catching scene errors
+
 #include "core/Model.hpp"
 
 #include <algorithm>
-
-// TODO: VALIDATOR
 
 namespace dice::core {
 
