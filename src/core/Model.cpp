@@ -4,6 +4,8 @@
 
 #include <algorithm>
 
+#include <spdlog/spdlog.h>
+
 namespace dice::core {
 
 Model::Model(std::shared_ptr<IObjectFactory> factory) : factory_(std::move(factory)) {
@@ -32,6 +34,7 @@ void Model::addRootObject(const std::shared_ptr<GameObject>& object) {
         return;
     roots_.push_back(object);
     registerRecursive(object);
+    spdlog::debug("Model: added root object '{}'", object->getId());
 }
 
 bool Model::attachTo(const std::string& parentId, const std::shared_ptr<GameObject>& object) {
@@ -64,6 +67,7 @@ bool Model::removeObject(const std::string& id) {
     }
 
     unregisterRecursive(obj);
+    spdlog::debug("Model: removed object '{}'", id);
     return true;
 }
 
@@ -134,6 +138,7 @@ void Model::fromJson(const nlohmann::json& j) {
         auto root = makeFromJsonNode(node);
         addRootObject(root);
     }
+    spdlog::info("Model: loaded {} root object(s) from JSON", roots_.size());
 }
 
 } // namespace dice::core

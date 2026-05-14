@@ -40,6 +40,7 @@ void Controller::loadTextures(dice::core::ResourceManager<sf::Texture>& textures
             if (!loadedTextureIds_.contains(tf)) {
                 textures.load(tf, tf);
                 loadedTextureIds_.insert(tf);
+                spdlog::info("Controller: texture loaded '{}'", tf);
             }
             obj->setTexture(textures.get(tf).get());
         }
@@ -178,8 +179,10 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
         const auto b = picked->getGlobalBounds();
         chipHalfW_ = b.width / 2.F;
         chipHalfH_ = b.height / 2.F;
+        spdlog::debug("Controller: drag start '{}'", picked->getId());
         lua_.fireEvent(dice::scripting::kEventOnDragStart, draggedObj_.get());
     } else if (picked) {
+        spdlog::debug("Controller: click '{}'", picked->getId());
         lua_.fireEvent(dice::scripting::kEventOnClick, picked.get());
     }
 }
@@ -219,7 +222,10 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
 void Controller::onMouseReleased(const sf::Event::MouseButtonEvent& /*ev*/) {
     if (draggedObj_) {
         if (!wasDragging_) {
+            spdlog::debug("Controller: click (on release) '{}'", draggedObj_->getId());
             lua_.fireEvent(dice::scripting::kEventOnClick, draggedObj_.get());
+        } else {
+            spdlog::debug("Controller: drag end '{}'", draggedObj_->getId());
         }
         lua_.fireEvent(dice::scripting::kEventOnDragEnd, draggedObj_.get());
         draggedObj_ = nullptr;
