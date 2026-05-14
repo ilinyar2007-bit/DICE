@@ -46,10 +46,11 @@ int main() {
 
     sf::Font font;
     const bool fontOk = font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
-    if (fontOk)
+    if (fontOk) {
         spdlog::info("Font loaded");
-    else
+    } else {
         spdlog::warn("Font not found — text will use fallback");
+    }
 
     Model model(makeDefaultFactory());
     LuaScriptEngine luaEngine;
