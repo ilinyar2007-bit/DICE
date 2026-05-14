@@ -1,5 +1,4 @@
 #include <components/Card.hpp>
-
 #include <spdlog/spdlog.h>
 
 namespace dice::components {
