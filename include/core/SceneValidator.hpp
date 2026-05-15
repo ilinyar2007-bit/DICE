@@ -61,7 +61,7 @@ struct ValidationMessage {
 
 class SceneValidator {
 public:
-    bool validate(const nlohmann::json& scene_json);
+    bool validate(const nlohmann::json& scene_json, const std::filesystem::path& scene_file_path);
 
     [[nodiscard]] const std::vector<ValidationMessage>& errors() const {
         return errors_;
@@ -82,6 +82,7 @@ public:
 private:
     std::vector<ValidationMessage> errors_;
     std::vector<ValidationMessage> warnings_;
+    std::filesystem::path scene_directory_;
 
     void clear() {
         warnings_.clear();

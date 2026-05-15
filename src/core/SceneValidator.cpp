@@ -7,8 +7,11 @@
 
 namespace dice::core {
 
-bool SceneValidator::validate(const nlohmann::json& scene_json) {
+bool SceneValidator::validate(const nlohmann::json& scene_json,
+                              const std::filesystem::path& scene_file_path) {
     clear();
+
+    scene_directory_ = scene_file_path.parent_path();
 
     checkSceneRoot(scene_json);
 
@@ -205,8 +208,10 @@ void SceneValidator::checkTextureFile(const nlohmann::json& obj) {
 
     const auto path = obj["textureFile"].get<std::string>();
 
-    if (!path.empty() && !std::filesystem::exists(path)) {
-        addWarning(MessageCode::W_TEXTURE_FILE_NOT_FOUND, "Texture file not found: " + path, obj);
+    if (!path.empty() && !std::filesystem::exists(scene_directory_ / path)) {
+        addWarning(MessageCode::W_TEXTURE_FILE_NOT_FOUND,
+                   "Texture file not found: " + (scene_directory_ / path).string(),
+                   obj);
     }
 }
 
@@ -222,8 +227,10 @@ void SceneValidator::checkLuaScript(const nlohmann::json& obj) {
 
     const auto path = obj["luaScript"].get<std::string>();
 
-    if (!path.empty() && !std::filesystem::exists(path)) {
-        addWarning(MessageCode::W_LUA_SCRIPT_NOT_FOUND, "Lua script file not found: " + path, obj);
+    if (!path.empty() && !std::filesystem::exists(scene_directory_ / path)) {
+        addWarning(MessageCode::W_LUA_SCRIPT_NOT_FOUND,
+                   "Lua script file not found: " + (scene_directory_ / path).string(),
+                   obj);
     }
 }
 
