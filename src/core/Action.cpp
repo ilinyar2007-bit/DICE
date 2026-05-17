@@ -29,10 +29,9 @@ void Action::fromJson(const nlohmann::json& json) {
 // ========== MoveObjectAction ==========
 
 MoveObjectAction::MoveObjectAction(std::string object_id,
-                                   sf::Vector2f new_position,
+                                   const sf::Vector2f& new_position,
                                    std::string name)
-    : Action(std::move(name)), objectId_(std::move(object_id)),
-      newPosition_(std::move(new_position)) {}
+    : Action(std::move(name)), objectId_(std::move(object_id)), newPosition_(new_position) {}
 
 ActionResult MoveObjectAction::execute(Model& model) {
     auto obj = model.getObject(objectId_);

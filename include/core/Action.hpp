@@ -73,7 +73,7 @@ class MoveObjectAction : public Action {
 public:
     MoveObjectAction() = default;
     MoveObjectAction(std::string object_id,
-                     sf::Vector2f new_position,
+                     const sf::Vector2f& new_position,
                      std::string name = "Move Object");
 
     ActionResult execute(Model& model) override;
