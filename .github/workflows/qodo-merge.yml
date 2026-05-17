@@ -1,8 +1,6 @@
 name: Qodo Merge
 
 on:
-  pull_request:
-    types: [opened, reopened, ready_for_review, synchronize, review_requested]
   issue_comment:
     types: [created, edited]
   workflow_dispatch:
@@ -26,5 +24,3 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_KEY }}
           CONFIG.MODEL: gemini/gemini-2.5-flash
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTION_CONFIG.PR_ACTIONS: '["opened","reopened","ready_for_review","review_requested","synchronize"]'
-          CONFIG.RESPONSE_LANGUAGE: ru
