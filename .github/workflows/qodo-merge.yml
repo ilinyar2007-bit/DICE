@@ -27,3 +27,4 @@ jobs:
           CONFIG.MODEL: gemini/gemini-2.5-flash
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTION_CONFIG.PR_ACTIONS: '["opened","reopened","ready_for_review","review_requested","synchronize"]'
+          CONFIG.RESPONSE_LANGUAGE: ru
