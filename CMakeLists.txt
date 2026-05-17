@@ -186,6 +186,7 @@ add_executable(dice_tests
   tests/ui/test_View.cpp
   tests/core/test_Model.cpp
   tests/core/test_ResourceManager.cpp
+  tests/core/test_Action.cpp
 )
 
 target_link_libraries(dice_tests
