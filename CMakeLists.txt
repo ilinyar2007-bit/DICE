@@ -105,6 +105,8 @@ add_library(dice_core STATIC
   src/ui/View.cpp
   src/core/Model.cpp
   src/components/Card.cpp
+  src/core/Action.cpp
+  src/core/ActionManager.cpp
 )
 
 target_include_directories(dice_core

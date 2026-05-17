@@ -14,6 +14,7 @@ class Model;
 class ActionManager {
 public:
     ActionManager() = default;
+    explicit ActionManager(Model& model) : model_(model) {}
     ~ActionManager() = default;
 
     bool execute(std::unique_ptr<Action> action);

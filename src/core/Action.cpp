@@ -58,6 +58,8 @@ ActionResult MoveObjectAction::undo(Model& model) {
     }
 
     obj->setPosition(oldPosition_);
+    executed_ = false;
+
     spdlog::debug("Undo move of object {} to ({}, {})", objectId_, oldPosition_.x, oldPosition_.y);
     return ActionResult::Success;
 }
@@ -128,6 +130,9 @@ ActionResult FlipCardAction::undo(Model& model) {
         return ActionResult::Failed;
 
     card->setFaceUp(oldFaceUp_);
+    executed_ = false;
+
+    spdlog::debug("Undo flip of card {}", cardId_);
     return ActionResult::Success;
 }
 
@@ -169,30 +174,57 @@ void CompositeAction::addAction(std::unique_ptr<Action> action, const std::strin
 
 ActionResult CompositeAction::execute(Model& model) {
     executionResults_.clear();
-    ActionResult overall = ActionResult::Success;
+    executionResults_.reserve(actions_.size());
 
-    for (auto& action : actions_) {
+    for (size_t i = 0; i < actions_.size(); ++i) {
+        auto& action = actions_[i];
         auto result = action->execute(model);
-        executionResults_.push_back(result == ActionResult::Success);
+        bool success = (result == ActionResult::Success);
+        executionResults_.push_back(success);
 
-        if (result != ActionResult::Success) {
-            overall = ActionResult::Partial;
-            spdlog::warn("Composite action sub-action failed: {}", action->getName());
+        if (!success) {
+            spdlog::error(
+                "Composite action: sub-action '{}' failed at index {}", action->getName(), i);
+
+            for (size_t j = 0; j < i; ++j) {
+                if (executionResults_[j]) {
+                    spdlog::debug("Rolling back action: {}", actions_[j]->getName());
+                    actions_[j]->undo(model);
+                }
+            }
+
+            executed_ = false;
+            return ActionResult::Failed;
         }
+        spdlog::debug("Composite action: sub-action '{}' succeeded", action->getName());
     }
 
     executed_ = true;
-    return overall;
+    spdlog::debug("Composite action '{}' executed successfully with {} sub-actions",
+                  getName(),
+                  actions_.size());
+    return ActionResult::Success;
 }
 
 ActionResult CompositeAction::undo(Model& model) {
-    if (!executed_)
+    if (!executed_) {
+        spdlog::warn("Composite action '{}' undo called but not executed", getName());
         return ActionResult::Invalid;
-
-    for (auto it = actions_.rbegin(); it != actions_.rend(); ++it) {
-        (*it)->undo(model);
     }
 
+    size_t undoneCount = 0;
+    for (size_t i = actions_.size(); i > 0; --i) {
+        size_t index = i - 1;
+        if (index < executionResults_.size() && executionResults_[index]) {
+            spdlog::debug("Undoing action: {}", actions_[index]->getName());
+            actions_[index]->undo(model);
+            undoneCount++;
+        }
+    }
+
+    executed_ = false;
+
+    spdlog::debug("Composite action '{}' undone ({} sub-actions)", getName(), undoneCount);
     return ActionResult::Success;
 }
 

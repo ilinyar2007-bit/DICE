@@ -5,7 +5,9 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include <SFML/System/Vector2.hpp>
 #include <nlohmann/json.hpp>
 
 namespace dice::core {
