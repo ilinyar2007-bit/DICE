@@ -13,7 +13,6 @@ class Model;
 
 class ActionManager {
 public:
-    ActionManager() = default;
     explicit ActionManager(Model& model) : model_(model) {}
     ~ActionManager() = default;
 

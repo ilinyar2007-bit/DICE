@@ -6,9 +6,9 @@
 namespace dice::core {
 
 bool ActionManager::execute(std::unique_ptr<Action> action) {
-    if (!action)
+    if (!action) {
         return false;
-
+    }
     redoDeque_.clear();
 
     if (action->execute(model_) != ActionResult::Success) {
@@ -27,9 +27,9 @@ bool ActionManager::execute(std::unique_ptr<Action> action) {
 }
 
 bool ActionManager::undo() {
-    if (undoDeque_.empty())
+    if (undoDeque_.empty()) {
         return false;
-
+    }
     auto action = std::move(undoDeque_.back());
     undoDeque_.pop_back();
 
@@ -44,9 +44,9 @@ bool ActionManager::undo() {
 }
 
 bool ActionManager::redo() {
-    if (redoDeque_.empty())
+    if (redoDeque_.empty()) {
         return false;
-
+    }
     auto action = std::move(redoDeque_.back());
     redoDeque_.pop_back();
 
@@ -61,8 +61,9 @@ bool ActionManager::redo() {
 }
 
 void ActionManager::clear() {
-    if (undoDeque_.empty() && redoDeque_.empty())
+    if (undoDeque_.empty() && redoDeque_.empty()) {
         return;
+    }
     undoDeque_.clear();
     redoDeque_.clear();
     spdlog::debug("Action history cleared");

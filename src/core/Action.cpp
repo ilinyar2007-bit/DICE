@@ -18,18 +18,21 @@ nlohmann::json Action::toJson() const {
 }
 
 void Action::fromJson(const nlohmann::json& json) {
-    if (json.contains("name"))
+    if (json.contains("name")) {
         name_ = json["name"];
-    if (json.contains("executed"))
+    }
+    if (json.contains("executed")) {
         executed_ = json["executed"];
+    }
 }
 
 // ========== MoveObjectAction ==========
 
-MoveObjectAction::MoveObjectAction(const std::string& objectId,
-                                   const sf::Vector2f& newPosition,
-                                   const std::string& name)
-    : Action(name), objectId_(objectId), newPosition_(newPosition) {}
+MoveObjectAction::MoveObjectAction(std::string object_id,
+                                   sf::Vector2f new_position,
+                                   std::string name)
+    : Action(std::move(name)), objectId_(std::move(object_id)),
+      newPosition_(std::move(new_position)) {}
 
 ActionResult MoveObjectAction::execute(Model& model) {
     auto obj = model.getObject(objectId_);
@@ -48,9 +51,9 @@ ActionResult MoveObjectAction::execute(Model& model) {
 }
 
 ActionResult MoveObjectAction::undo(Model& model) {
-    if (!executed_)
+    if (!executed_) {
         return ActionResult::Invalid;
-
+    }
     auto obj = model.getObject(objectId_);
     if (!obj) {
         spdlog::error("MoveObjectAction undo: Object {} not found", objectId_);
@@ -79,8 +82,9 @@ nlohmann::json MoveObjectAction::toJson() const {
 
 void MoveObjectAction::fromJson(const nlohmann::json& json) {
     Action::fromJson(json);
-    if (json.contains("objectId"))
+    if (json.contains("objectId")) {
         objectId_ = json["objectId"];
+    }
     if (json.contains("newPosition")) {
         newPosition_.x = json["newPosition"][0];
         newPosition_.y = json["newPosition"][1];
@@ -93,8 +97,8 @@ void MoveObjectAction::fromJson(const nlohmann::json& json) {
 
 // ========== FlipCardAction ==========
 
-FlipCardAction::FlipCardAction(const std::string& cardId, const std::string& name)
-    : Action(name), cardId_(cardId) {}
+FlipCardAction::FlipCardAction(std::string card_id, std::string name)
+    : Action(std::move(name)), cardId_(std::move(card_id)) {}
 
 ActionResult FlipCardAction::execute(Model& model) {
     auto obj = model.getObject(cardId_);
@@ -104,9 +108,9 @@ ActionResult FlipCardAction::execute(Model& model) {
     }
 
     auto card = std::dynamic_pointer_cast<components::Card>(obj);
-    if (!card)
+    if (!card) {
         return ActionResult::Failed;
-
+    }
     oldFaceUp_ = card->isFaceUp();
     newFaceUp_ = !oldFaceUp_;
 
@@ -118,17 +122,17 @@ ActionResult FlipCardAction::execute(Model& model) {
 }
 
 ActionResult FlipCardAction::undo(Model& model) {
-    if (!executed_)
+    if (!executed_) {
         return ActionResult::Invalid;
-
+    }
     auto obj = model.getObject(cardId_);
-    if (!obj)
+    if (!obj) {
         return ActionResult::Failed;
-
+    }
     auto card = std::dynamic_pointer_cast<components::Card>(obj);
-    if (!card)
+    if (!card) {
         return ActionResult::Failed;
-
+    }
     card->setFaceUp(oldFaceUp_);
     executed_ = false;
 
@@ -151,17 +155,20 @@ nlohmann::json FlipCardAction::toJson() const {
 
 void FlipCardAction::fromJson(const nlohmann::json& json) {
     Action::fromJson(json);
-    if (json.contains("cardId"))
+    if (json.contains("cardId")) {
         cardId_ = json["cardId"];
-    if (json.contains("oldFaceUp"))
+    }
+    if (json.contains("oldFaceUp")) {
         oldFaceUp_ = json["oldFaceUp"];
-    if (json.contains("newFaceUp"))
+    }
+    if (json.contains("newFaceUp")) {
         newFaceUp_ = json["newFaceUp"];
+    }
 }
 
 // ========== CompositeAction ==========
 
-CompositeAction::CompositeAction(const std::string& name) : Action(name) {}
+CompositeAction::CompositeAction(std::string name) : Action(std::move(name)) {}
 
 void CompositeAction::addAction(std::unique_ptr<Action> action) {
     actions_.push_back(std::move(action));
@@ -179,7 +186,7 @@ ActionResult CompositeAction::execute(Model& model) {
     for (size_t i = 0; i < actions_.size(); ++i) {
         auto& action = actions_[i];
         auto result = action->execute(model);
-        bool success = (result == ActionResult::Success);
+        const bool success = (result == ActionResult::Success);
         executionResults_.push_back(success);
 
         if (!success) {
@@ -214,7 +221,7 @@ ActionResult CompositeAction::undo(Model& model) {
 
     size_t undoneCount = 0;
     for (size_t i = actions_.size(); i > 0; --i) {
-        size_t index = i - 1;
+        const size_t index = i - 1;
         if (index < executionResults_.size() && executionResults_[index]) {
             spdlog::debug("Undoing action: {}", actions_[index]->getName());
             actions_[index]->undo(model);
@@ -230,8 +237,9 @@ ActionResult CompositeAction::undo(Model& model) {
 
 bool CompositeAction::canExecute(const Model& model) const {
     for (const auto& action : actions_) {
-        if (!action->canExecute(model))
+        if (!action->canExecute(model)) {
             return false;
+        }
     }
     return true;
 }
@@ -273,8 +281,9 @@ std::unique_ptr<Action> ActionFactory::createAction(ActionType type) {
 }
 
 std::unique_ptr<Action> ActionFactory::createFromJson(const nlohmann::json& json) {
-    if (!json.contains("type"))
+    if (!json.contains("type")) {
         return nullptr;
+    }
 
     auto type = static_cast<ActionType>(json["type"].get<int>());
     auto action = createAction(type);

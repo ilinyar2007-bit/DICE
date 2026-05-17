@@ -28,7 +28,7 @@ enum class ActionResult { Success, Failed, Invalid, Partial };
 class Action {
 public:
     Action() = default;
-    explicit Action(const std::string& name) : name_(name) {}
+    explicit Action(std::string name) : name_(std::move(name)) {}
     virtual ~Action() = default;
 
     virtual ActionResult execute(Model& model) = 0;
@@ -72,9 +72,9 @@ protected:
 class MoveObjectAction : public Action {
 public:
     MoveObjectAction() = default;
-    MoveObjectAction(const std::string& objectId,
-                     const sf::Vector2f& newPosition,
-                     const std::string& name = "Move Object");
+    MoveObjectAction(std::string object_id,
+                     sf::Vector2f new_position,
+                     std::string name = "Move Object");
 
     ActionResult execute(Model& model) override;
     ActionResult undo(Model& model) override;
@@ -97,7 +97,7 @@ private:
 class FlipCardAction : public Action {
 public:
     FlipCardAction() = default;
-    explicit FlipCardAction(const std::string& cardId, const std::string& name = "Flip Card");
+    explicit FlipCardAction(std::string card_id, std::string name = "Flip Card");
 
     ActionResult execute(Model& model) override;
     ActionResult undo(Model& model) override;
@@ -120,7 +120,7 @@ private:
 class CompositeAction : public Action {
 public:
     CompositeAction() = default;
-    explicit CompositeAction(const std::string& name);
+    explicit CompositeAction(std::string name);
 
     void addAction(std::unique_ptr<Action> action);
     void addAction(std::unique_ptr<Action> action, const std::string& name);
