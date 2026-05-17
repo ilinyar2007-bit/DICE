@@ -2,7 +2,7 @@ name: Qodo Merge
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
+    types: [opened, reopened, ready_for_review, synchronize, review_requested]
   issue_comment:
     types: [created, edited]
   workflow_dispatch:
