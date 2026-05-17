@@ -10,9 +10,19 @@
 #include "scene/DefaultFactory.hpp"
 #include <gtest/gtest.h>
 
-using namespace dice::core;
-using namespace dice::components;
-using namespace dice::scene;
+using dice::core::Action;
+using dice::core::ActionFactory;
+using dice::core::ActionResult;
+using dice::core::ActionType;
+using dice::core::CompositeAction;
+using dice::core::FlipCardAction;
+using dice::core::Model;
+using dice::core::MoveObjectAction;
+
+using dice::components::Card;
+using dice::components::Chip;
+
+using dice::scene::makeDefaultFactory;
 
 // ========== Fixture ==========
 
@@ -36,16 +46,16 @@ protected:
         card->setBackTexture(&dummyTex);
     }
 
-    sf::Texture dummyTex;
-    Model model;
-    std::shared_ptr<Chip> chip;
-    std::shared_ptr<Card> card;
+    sf::Texture dummyTex;       // NOLINT
+    Model model;                // NOLINT
+    std::shared_ptr<Chip> chip; // NOLINT
+    std::shared_ptr<Card> card; // NOLINT
 };
 
 // ========== MoveObjectAction Tests ==========
 
 TEST_F(ActionTest, MoveObjectActionExecute) {
-    sf::Vector2f newPos(300, 400);
+    const sf::Vector2f newPos(300, 400);
     MoveObjectAction action("chip1", newPos, "Move Chip");
 
     auto result = action.execute(model);
@@ -57,8 +67,8 @@ TEST_F(ActionTest, MoveObjectActionExecute) {
 }
 
 TEST_F(ActionTest, MoveObjectActionUndo) {
-    sf::Vector2f oldPos = chip->getPosition();
-    sf::Vector2f newPos(300, 400);
+    const sf::Vector2f oldPos = chip->getPosition();
+    const sf::Vector2f newPos(300, 400);
 
     MoveObjectAction action("chip1", newPos, "Move Chip");
     action.execute(model);
@@ -71,18 +81,18 @@ TEST_F(ActionTest, MoveObjectActionUndo) {
 }
 
 TEST_F(ActionTest, MoveObjectActionCanExecute) {
-    MoveObjectAction action("chip1", {300, 400});
+    const MoveObjectAction action("chip1", {300, 400});
     EXPECT_TRUE(action.canExecute(model));
 }
 
 TEST_F(ActionTest, MoveObjectActionCannotExecuteWhenNotFound) {
-    MoveObjectAction action("nonexistent", {300, 400});
+    const MoveObjectAction action("nonexistent", {300, 400});
     EXPECT_FALSE(action.canExecute(model));
 }
 
 TEST_F(ActionTest, MoveObjectActionCannotExecuteWhenNotDraggable) {
     chip->setDraggable(false);
-    MoveObjectAction action("chip1", {300, 400});
+    const MoveObjectAction action("chip1", {300, 400});
     EXPECT_FALSE(action.canExecute(model));
 }
 
@@ -107,7 +117,7 @@ TEST_F(ActionTest, MoveObjectActionSerialization) {
 // ========== FlipCardAction Tests ==========
 
 TEST_F(ActionTest, FlipCardActionExecute) {
-    bool oldFaceUp = card->isFaceUp();
+    const bool oldFaceUp = card->isFaceUp();
 
     FlipCardAction action("card1", "Flip");
     auto result = action.execute(model);
@@ -118,7 +128,7 @@ TEST_F(ActionTest, FlipCardActionExecute) {
 }
 
 TEST_F(ActionTest, FlipCardActionUndo) {
-    bool oldFaceUp = card->isFaceUp();
+    const bool oldFaceUp = card->isFaceUp();
 
     FlipCardAction action("card1", "Flip");
     action.execute(model);
@@ -130,12 +140,12 @@ TEST_F(ActionTest, FlipCardActionUndo) {
 }
 
 TEST_F(ActionTest, FlipCardActionCanExecute) {
-    FlipCardAction action("card1");
+    const FlipCardAction action("card1");
     EXPECT_TRUE(action.canExecute(model));
 }
 
 TEST_F(ActionTest, FlipCardActionCannotExecuteOnChip) {
-    FlipCardAction action("chip1");
+    const FlipCardAction action("chip1");
     EXPECT_FALSE(action.canExecute(model));
 }
 
@@ -169,8 +179,8 @@ TEST_F(ActionTest, CompositeActionExecuteMultipleActions) {
 }
 
 TEST_F(ActionTest, CompositeActionUndo) {
-    sf::Vector2f oldChipPos = chip->getPosition();
-    bool oldCardFaceUp = card->isFaceUp();
+    const sf::Vector2f oldChipPos = chip->getPosition();
+    const bool oldCardFaceUp = card->isFaceUp();
 
     CompositeAction composite("Move and Flip");
     composite.addAction(std::make_unique<MoveObjectAction>("chip1", sf::Vector2f(300, 400)));
@@ -264,7 +274,7 @@ TEST_F(ActionTest, ActionFactoryReturnsNullForUnknownType) {
 }
 
 TEST_F(ActionTest, ActionFactoryCreatesFromJson) {
-    MoveObjectAction original("chip1", sf::Vector2f(300, 400), "Move");
+    const MoveObjectAction original("chip1", sf::Vector2f(300, 400), "Move");
     auto json = original.toJson();
 
     auto restored = ActionFactory::createFromJson(json);
@@ -292,7 +302,7 @@ TEST_F(ActionTest, BaseActionSetName) {
         ActionResult undo(Model&) override {
             return ActionResult::Success;
         }
-        bool canExecute(const Model&) const override {
+        [[nodiscard]] bool canExecute(const Model&) const override {
             return true;
         }
     };
@@ -311,7 +321,7 @@ TEST_F(ActionTest, BaseActionTimestamp) {
         ActionResult undo(Model&) override {
             return ActionResult::Success;
         }
-        bool canExecute(const Model&) const override {
+        [[nodiscard]] bool canExecute(const Model&) const override {
             return true;
         }
     };
