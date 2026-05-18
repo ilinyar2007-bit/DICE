@@ -4,17 +4,21 @@
 
 #include <algorithm>
 
+#include <spdlog/spdlog.h>
+
 namespace dice::core {
 
 Model::Model(std::shared_ptr<IObjectFactory> factory) : factory_(std::move(factory)) {
-    if (!factory_)
+    if (!factory_) {
         factory_ = std::make_shared<GameObjectFactory>();
+    }
 }
 
 void Model::setFactory(std::shared_ptr<IObjectFactory> factory) {
     factory_ = std::move(factory);
-    if (!factory_)
+    if (!factory_) {
         factory_ = std::make_shared<GameObjectFactory>();
+    }
 }
 
 std::shared_ptr<GameObject> Model::getObject(const std::string& id) const {
@@ -28,19 +32,23 @@ void Model::clear() {
 }
 
 void Model::addRootObject(const std::shared_ptr<GameObject>& object) {
-    if (!object || objects_.count(object->getId()))
+    if (!object || objects_.contains(object->getId())) {
         return;
+    }
     roots_.push_back(object);
     registerRecursive(object);
+    spdlog::debug("Model: added root object '{}'", object->getId());
 }
 
-bool Model::attachTo(const std::string& parentId, const std::shared_ptr<GameObject>& object) {
-    if (!object || objects_.count(object->getId()))
+bool Model::attachTo(const std::string& parent_id, const std::shared_ptr<GameObject>& object) {
+    if (!object || objects_.contains(object->getId())) {
         return false;
+    }
 
-    auto parent = getObject(parentId);
-    if (!parent)
+    auto parent = getObject(parent_id);
+    if (!parent) {
         return false;
+    }
 
     parent->addChild(object);
     registerRecursive(object);
@@ -49,8 +57,9 @@ bool Model::attachTo(const std::string& parentId, const std::shared_ptr<GameObje
 
 bool Model::removeObject(const std::string& id) {
     auto obj = getObject(id);
-    if (!obj)
+    if (!obj) {
         return false;
+    }
 
     if (auto* parent = obj->getParent(); parent != nullptr) {
         parent->removeChild(id);
@@ -64,16 +73,18 @@ bool Model::removeObject(const std::string& id) {
     }
 
     unregisterRecursive(obj);
+    spdlog::debug("Model: removed object '{}'", id);
     return true;
 }
 
-void Model::registerRecursive(const std::shared_ptr<GameObject>& obj) {
+void Model::registerRecursive(const std::shared_ptr<GameObject>& obj) { // NOLINT(misc-no-recursion)
     objects_[obj->getId()] = obj;
     for (const auto& child : obj->getChildren()) {
         registerRecursive(child);
     }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void Model::unregisterRecursive(const std::shared_ptr<GameObject>& obj) {
     objects_.erase(obj->getId());
     for (const auto& child : obj->getChildren()) {
@@ -81,7 +92,7 @@ void Model::unregisterRecursive(const std::shared_ptr<GameObject>& obj) {
     }
 }
 
-void Model::forEachDepthFirstImpl(
+void Model::forEachDepthFirstImpl( // NOLINT(misc-no-recursion)
     const std::shared_ptr<GameObject>& node,
     const std::function<void(const std::shared_ptr<GameObject>&)>& fn) {
     fn(node);
@@ -106,17 +117,18 @@ nlohmann::json Model::toJson() const {
     return j;
 }
 
-std::shared_ptr<GameObject> Model::makeFromJsonNode(const nlohmann::json& nodeJson) {
-    const std::string typeStr = nodeJson.value("type", "GameObject");
-    const std::string id = nodeJson.value("id", "");
-    const std::string name = nodeJson.value("name", "");
+std::shared_ptr<GameObject>
+Model::makeFromJsonNode(const nlohmann::json& node_json) { // NOLINT(misc-no-recursion)
+    const std::string typeStr = node_json.value("type", "GameObject");
+    const std::string id = node_json.value("id", "");
+    const std::string name = node_json.value("name", "");
 
     auto obj = factory_->create(objectTypeFromString(typeStr), id, name);
 
-    obj->fromJson(nodeJson);
+    obj->fromJson(node_json);
 
-    if (nodeJson.contains("children")) {
-        for (const auto& childJson : nodeJson["children"]) {
+    if (node_json.contains("children")) {
+        for (const auto& childJson : node_json["children"]) {
             auto child = makeFromJsonNode(childJson);
             obj->addChild(child);
         }
@@ -127,13 +139,15 @@ std::shared_ptr<GameObject> Model::makeFromJsonNode(const nlohmann::json& nodeJs
 
 void Model::fromJson(const nlohmann::json& j) {
     clear();
-    if (!j.contains("objects"))
+    if (!j.contains("objects")) {
         return;
+    }
 
     for (const auto& node : j.at("objects")) {
         auto root = makeFromJsonNode(node);
         addRootObject(root);
     }
+    spdlog::info("Model: loaded {} root object(s) from JSON", roots_.size());
 }
 
 } // namespace dice::core

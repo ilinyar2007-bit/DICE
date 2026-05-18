@@ -27,7 +27,7 @@ public:
     std::shared_ptr<GameObject> getObject(const std::string& id) const;
 
     void addRootObject(const std::shared_ptr<GameObject>& object);
-    bool attachTo(const std::string& parentId, const std::shared_ptr<GameObject>& object);
+    bool attachTo(const std::string& parent_id, const std::shared_ptr<GameObject>& object);
     bool removeObject(const std::string& id);
 
     void forEachDepthFirst(const std::function<void(const std::shared_ptr<GameObject>&)>& fn) const;
@@ -50,7 +50,7 @@ private:
     forEachDepthFirstImpl(const std::shared_ptr<GameObject>& node,
                           const std::function<void(const std::shared_ptr<GameObject>&)>& fn);
 
-    std::shared_ptr<GameObject> makeFromJsonNode(const nlohmann::json& nodeJson);
+    std::shared_ptr<GameObject> makeFromJsonNode(const nlohmann::json& node_json);
 };
 
 } // namespace dice::core

@@ -1,4 +1,5 @@
 #include <components/Card.hpp>
+#include <spdlog/spdlog.h>
 
 namespace dice::components {
 
@@ -30,6 +31,7 @@ void Card::setBackTexture(const sf::Texture* texture) {
 
 void Card::setFaceUp(bool face_up) {
     face_up_ = face_up;
+    spdlog::debug("Card '{}': face {}", getId(), face_up ? "up" : "down");
 
     if (face_up_) {
         if (front_texture_ != nullptr) {
