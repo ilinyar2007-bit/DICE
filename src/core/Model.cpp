@@ -32,7 +32,7 @@ void Model::clear() {
 }
 
 void Model::addRootObject(const std::shared_ptr<GameObject>& object) {
-    if (!object || objects_.contains(object->getId())) {
+    if (!object || objects_.count(object->getId())) {
         return;
     }
     roots_.push_back(object);
@@ -41,7 +41,7 @@ void Model::addRootObject(const std::shared_ptr<GameObject>& object) {
 }
 
 bool Model::attachTo(const std::string& parent_id, const std::shared_ptr<GameObject>& object) {
-    if (!object || objects_.contains(object->getId())) {
+    if (!object || objects_.count(object->getId())) {
         return false;
     }
 
