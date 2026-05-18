@@ -104,7 +104,7 @@ add_library(dice_core STATIC
   src/components/Card.cpp
   src/ui/View.cpp
   src/core/Model.cpp
-  src/components/Card.cpp
+  src/core/SceneValidator.cpp
 )
 
 target_include_directories(dice_core
@@ -211,6 +211,7 @@ add_executable(dice_tests
   tests/ui/test_View.cpp
   tests/core/test_Model.cpp
   tests/core/test_ResourceManager.cpp
+  tests/core/test_SceneValidator.cpp
 )
 
 target_link_libraries(dice_tests
