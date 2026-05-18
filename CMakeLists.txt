@@ -233,6 +233,22 @@ include(GoogleTest)
 gtest_discover_tests(dice_tests)
 gtest_discover_tests(dice_scripting_tests)
 
+option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
+
+if (ENABLE_SANITIZERS AND UNIX AND NOT APPLE)
+  message(STATUS "Sanitizers enabled")
+
+  set(SAN_FLAGS -fsanitize=address,undefined)
+
+  add_compile_options(
+    ${SAN_FLAGS}
+    -fno-omit-frame-pointer
+    -g
+  )
+
+  add_link_options(${SAN_FLAGS})
+endif()
+
 # ----------------------------
 # Application compile options
 # ----------------------------
