@@ -22,5 +22,6 @@ jobs:
         env:
           CONFIG.AI_PROVIDER: google
           GEMINI_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_KEY }}
-          CONFIG.MODEL: gemini/gemini-2.5-flash
+          CONFIG.MODEL: gemini/gemini-2.5-pro
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIG.RESPONSE_LANGUAGE: ru
