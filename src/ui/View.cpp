@@ -161,11 +161,11 @@ void View::drawControls() {
 
 // Support functions
 
-void View::loadFontAsset() {
+void View::loadFontAsset() const {
     if (fontLoaded_) {
         return;
     }
-    if (!fontManager_) {
+    if (fontManager_ == nullptr) {
         spdlog::warn("View: No font manager set, cannot load font");
         return;
     }
@@ -182,7 +182,7 @@ void View::loadFontAsset() {
 
 sf::Font& View::getFont() const {
     if (!fontLoaded_) {
-        const_cast<View*>(this)->loadFontAsset();
+        loadFontAsset();
     }
     return font_;
 }

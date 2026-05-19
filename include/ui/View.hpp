@@ -90,7 +90,7 @@ private:
 
     // Support functions
 
-    void loadFontAsset();
+    void loadFontAsset() const;
     sf::Font& getFont() const;
     sf::Text createText(
         const std::string& str, unsigned int size, const sf::Color& color, float x, float y) const;
