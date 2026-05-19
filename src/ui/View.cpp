@@ -191,7 +191,8 @@ void View::loadFontAsset() const {
 }
 
 sf::Font& View::getFont() const {
-    assert(fontLoaded_ && font_ != nullptr && "getFont() called before font was successfully loaded");
+    assert(fontLoaded_ && font_ != nullptr &&
+           "getFont() called before font was successfully loaded");
     return *font_;
 }
 
