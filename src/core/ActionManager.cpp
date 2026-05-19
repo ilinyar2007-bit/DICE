@@ -5,73 +5,44 @@
 
 namespace dice::core {
 
-bool ActionManager::execute(std::unique_ptr<Action> action) {
-    if (!action) {
-        return false;
-    }
-    redoDeque_.clear();
-
-    if (action->execute(model_) != ActionResult::Success) {
-        spdlog::error("Action execution failed: {}", action->getName());
-        return false;
-    }
-
-    action->setTimestamp();
-    undoDeque_.push_back(std::move(action));
-
+void ActionManager::saveSnapshot(const Model& model) {
+    redoStack_.clear();
+    undoStack_.push_back(model.toJson());
     trimHistory();
+    spdlog::debug("Snapshot saved, undo stack: {}", undoStack_.size());
+}
 
-    spdlog::debug(
-        "Action executed: {}, history size: {}", undoDeque_.back()->getName(), undoDeque_.size());
+bool ActionManager::undo(Model& model) {
+    if (undoStack_.empty()) {
+        return false;
+    }
+    redoStack_.push_back(model.toJson());
+    model.fromJson(undoStack_.back());
+    undoStack_.pop_back();
+    spdlog::debug("Undo: undo={}, redo={}", undoStack_.size(), redoStack_.size());
     return true;
 }
 
-bool ActionManager::undo() {
-    if (undoDeque_.empty()) {
+bool ActionManager::redo(Model& model) {
+    if (redoStack_.empty()) {
         return false;
     }
-    auto action = std::move(undoDeque_.back());
-    undoDeque_.pop_back();
-
-    if (action->undo(model_) != ActionResult::Success) {
-        spdlog::error("Undo failed for: {}", action->getName());
-        return false;
-    }
-
-    redoDeque_.push_back(std::move(action));
-    spdlog::debug("Undo executed, history size: {}", undoDeque_.size());
-    return true;
-}
-
-bool ActionManager::redo() {
-    if (redoDeque_.empty()) {
-        return false;
-    }
-    auto action = std::move(redoDeque_.back());
-    redoDeque_.pop_back();
-
-    if (action->execute(model_) != ActionResult::Success) {
-        spdlog::error("Redo failed for: {}", action->getName());
-        return false;
-    }
-
-    undoDeque_.push_back(std::move(action));
-    spdlog::debug("Redo executed, history size: {}", undoDeque_.size());
+    undoStack_.push_back(model.toJson());
+    model.fromJson(redoStack_.back());
+    redoStack_.pop_back();
+    spdlog::debug("Redo: undo={}, redo={}", undoStack_.size(), redoStack_.size());
     return true;
 }
 
 void ActionManager::clear() {
-    if (undoDeque_.empty() && redoDeque_.empty()) {
-        return;
-    }
-    undoDeque_.clear();
-    redoDeque_.clear();
-    spdlog::debug("Action history cleared");
+    undoStack_.clear();
+    redoStack_.clear();
+    spdlog::debug("History cleared");
 }
 
 void ActionManager::trimHistory() {
-    while (undoDeque_.size() > maxHistorySize_) {
-        undoDeque_.pop_front();
+    while (undoStack_.size() > maxHistorySize_) {
+        undoStack_.pop_front();
     }
 }
 

@@ -1,11 +1,9 @@
 #ifndef DICE_ACTION_MANAGER_HPP
 #define DICE_ACTION_MANAGER_HPP
 
-#include <memory>
-#include <stack>
-#include <vector>
+#include <deque>
 
-#include "core/Action.hpp"
+#include <nlohmann/json.hpp>
 
 namespace dice::core {
 
@@ -13,46 +11,37 @@ class Model;
 
 class ActionManager {
 public:
-    explicit ActionManager(Model& model) : model_(model) {}
-    ~ActionManager() = default;
+    ActionManager() = default;
 
-    bool execute(std::unique_ptr<Action> action);
+    void saveSnapshot(const Model& model);
 
-    bool undo();
-
-    bool redo();
-
-    void clear();
+    bool undo(Model& model);
+    bool redo(Model& model);
 
     bool canUndo() const {
-        return !undoDeque_.empty();
+        return !undoStack_.empty();
     }
     bool canRedo() const {
-        return !redoDeque_.empty();
+        return !redoStack_.empty();
     }
-
     size_t getUndoCount() const {
-        return undoDeque_.size();
+        return undoStack_.size();
     }
     size_t getRedoCount() const {
-        return redoDeque_.size();
+        return redoStack_.size();
     }
 
-    Action* getLastAction() const {
-        return undoDeque_.empty() ? nullptr : undoDeque_.back().get();
-    }
-
-    void setMaxHistorySize(size_t maxSize) {
-        maxHistorySize_ = maxSize;
+    void clear();
+    void setMaxHistorySize(size_t size) {
+        maxHistorySize_ = size;
     }
 
 private:
     void trimHistory();
 
-    Model& model_;
-    std::deque<std::unique_ptr<Action>> undoDeque_;
-    std::deque<std::unique_ptr<Action>> redoDeque_;
-    size_t maxHistorySize_ = 100;
+    std::deque<nlohmann::json> undoStack_;
+    std::deque<nlohmann::json> redoStack_;
+    size_t maxHistorySize_ = 50;
 };
 
 } // namespace dice::core
