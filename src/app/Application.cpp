@@ -128,10 +128,7 @@ void Application::initController() {
     controller_.loadTextures(textures_);
 
     auto font = fonts_.get("default_font");
-    bool hasFont = (font != nullptr);
-
-    sf::Font dummyFont;
-    controller_.registerDefaultFunctions(textures_, hasFont ? *font : dummyFont, hasFont);
+    controller_.registerDefaultFunctions(textures_, font.get());
 
     spdlog::info("Controller initialized");
 }

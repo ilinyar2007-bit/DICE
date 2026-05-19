@@ -34,8 +34,7 @@ public:
     void loadTextures(dice::core::ResourceManager<sf::Texture>& textures);
 
     void registerDefaultFunctions(dice::core::ResourceManager<sf::Texture>& textures,
-                                  const sf::Font& font,
-                                  bool font_ok);
+                                  const sf::Font* font);
 
     void handleEvent(const sf::Event& event);
 
