@@ -124,6 +124,9 @@ void View::drawHUD(const std::vector<std::shared_ptr<core::GameObject>>& objects
 }
 
 void View::drawFPS() {
+    if (!fontLoaded_) {
+        return;
+    }
     std::stringstream ss;
     ss << "FPS: " << static_cast<int>(fps_);
 
@@ -132,6 +135,9 @@ void View::drawFPS() {
 }
 
 void View::drawObjectCount(const std::vector<std::shared_ptr<core::GameObject>>& objects) {
+    if (!fontLoaded_) {
+        return;
+    }
     size_t visibleCount = 0;
     for (const auto& obj : objects) {
         if (obj && obj->isVisible()) {
@@ -146,6 +152,9 @@ void View::drawObjectCount(const std::vector<std::shared_ptr<core::GameObject>>&
 }
 
 void View::drawControls() {
+    if (!fontLoaded_) {
+        return;
+    }
     const std::vector<std::string> controls = {"Controls:", "ESC - Exit"};
 
     const float startY =
@@ -172,7 +181,7 @@ void View::loadFontAsset() const {
 
     auto font = fontManager_->get(config_.fontAssetId);
     if (font) {
-        font_ = *font;
+        font_ = font;
         fontLoaded_ = true;
         spdlog::info("View: Loaded font asset '{}'", config_.fontAssetId);
     } else {
@@ -184,7 +193,7 @@ sf::Font& View::getFont() const {
     if (!fontLoaded_) {
         loadFontAsset();
     }
-    return font_;
+    return *font_;
 }
 
 sf::Text View::createText(

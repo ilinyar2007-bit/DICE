@@ -93,8 +93,7 @@ void Application::initResources() {
     }
 
     if (!fontLoaded) {
-        spdlog::warn("No font found, creating empty font");
-        fonts_.create("default_font");
+        spdlog::warn("No font found, text rendering will be disabled");
     }
 }
 

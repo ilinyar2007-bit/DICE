@@ -105,7 +105,7 @@ private:
     int frameCount_ = 0;
     float fpsTimer_ = 0.0F;
 
-    mutable sf::Font font_;
+    mutable std::shared_ptr<sf::Font> font_;
     mutable bool fontLoaded_ = false;
     core::ResourceManager<sf::Font>* fontManager_ = nullptr;
 
