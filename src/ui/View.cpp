@@ -1,5 +1,6 @@
 #include "ui/View.hpp"
 
+#include <cassert>
 #include <ranges>
 
 namespace dice::view {
@@ -124,6 +125,9 @@ void View::drawHUD(const std::vector<std::shared_ptr<core::GameObject>>& objects
 }
 
 void View::drawFPS() {
+    if (!fontLoaded_) {
+        return;
+    }
     std::stringstream ss;
     ss << "FPS: " << static_cast<int>(fps_);
 
@@ -132,6 +136,9 @@ void View::drawFPS() {
 }
 
 void View::drawObjectCount(const std::vector<std::shared_ptr<core::GameObject>>& objects) {
+    if (!fontLoaded_) {
+        return;
+    }
     size_t visibleCount = 0;
     for (const auto& obj : objects) {
         if (obj && obj->isVisible()) {
@@ -146,6 +153,9 @@ void View::drawObjectCount(const std::vector<std::shared_ptr<core::GameObject>>&
 }
 
 void View::drawControls() {
+    if (!fontLoaded_) {
+        return;
+    }
     const std::vector<std::string> controls = {"Controls:", "ESC - Exit"};
 
     const float startY =
@@ -161,16 +171,29 @@ void View::drawControls() {
 
 // Support functions
 
-sf::Font& View::getFont() const {
-    if (!fontLoaded_) {
-        if (font_.loadFromFile(config_.fontPath)) {
-            fontLoaded_ = true;
-            spdlog::debug("Loaded font from {}", config_.fontPath);
-        } else {
-            spdlog::warn("Failed to load font from {}, using default", config_.fontPath);
-        }
+void View::loadFontAsset() const {
+    if (fontLoaded_) {
+        return;
     }
-    return font_;
+    if (fontManager_ == nullptr) {
+        spdlog::warn("View: No font manager set, cannot load font");
+        return;
+    }
+
+    auto font = fontManager_->get(config_.fontAssetId);
+    if (font) {
+        font_ = font;
+        fontLoaded_ = true;
+        spdlog::info("View: Loaded font asset '{}'", config_.fontAssetId);
+    } else {
+        spdlog::error("View: Font asset '{}' not found in resource manager", config_.fontAssetId);
+    }
+}
+
+sf::Font& View::getFont() const {
+    assert(fontLoaded_ && font_ != nullptr &&
+           "getFont() called before font was successfully loaded");
+    return *font_;
 }
 
 sf::Text View::createText(

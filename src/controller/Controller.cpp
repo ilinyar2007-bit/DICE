@@ -51,16 +51,15 @@ void Controller::loadTextures(dice::core::ResourceManager<sf::Texture>& textures
 }
 
 void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Texture>& textures,
-                                          const sf::Font& font,
-                                          bool font_ok) {
+                                          const sf::Font* font) {
     lua_.registerFunction("cpp_rand", [](int lo, int hi) -> int {
         static std::mt19937 rng(std::random_device{}());
         return std::uniform_int_distribution<int>(lo, hi)(rng);
     });
 
-    auto makeText = [&font](const std::string& str, float size, int r, int g, int b) {
+    auto makeText = [font](const std::string& str, float size, int r, int g, int b) {
         sf::Text t;
-        t.setFont(font);
+        t.setFont(*font);
         t.setString(sf::String::fromUtf8(str.begin(), str.end()));
         t.setCharacterSize(static_cast<unsigned>(size));
         t.setFillColor(sf::Color(r, g, b));
@@ -71,9 +70,9 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
 
     lua_.registerFunction(
         "cpp_draw_text_left",
-        [this, &font, font_ok, makeText](
+        [this, font, makeText](
             const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (!font_ok) {
+            if (font == nullptr) {
                 return;
             }
             auto t = makeText(s, sz, r, g, b);
@@ -83,9 +82,9 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
 
     lua_.registerFunction(
         "cpp_draw_text_center",
-        [this, &font, font_ok, makeText](
+        [this, font, makeText](
             const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (!font_ok) {
+            if (font == nullptr) {
                 return;
             }
             auto t = makeText(s, sz, r, g, b);
@@ -97,9 +96,9 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
 
     lua_.registerFunction(
         "cpp_draw_text_right",
-        [this, &font, font_ok, makeText](
+        [this, font, makeText](
             const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (!font_ok) {
+            if (font == nullptr) {
                 return;
             }
             auto t = makeText(s, sz, r, g, b);

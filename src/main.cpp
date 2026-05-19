@@ -56,7 +56,7 @@ int main() {
     LuaScriptEngine luaEngine;
 
     Controller controller(model, view, luaEngine, window);
-    controller.registerDefaultFunctions(textures, font, fontOk);
+    controller.registerDefaultFunctions(textures, fontOk ? &font : nullptr);
 
     if (!luaEngine.executeGlobalScript("scripts/game.lua")) {
         spdlog::error("Failed to load scripts/game.lua — run from project root!");

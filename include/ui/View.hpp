@@ -8,6 +8,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "core/GameObject.hpp"
+#include "core/ResourceManager.hpp"
 #include <spdlog/spdlog.h>
 
 namespace dice::view {
@@ -23,7 +24,7 @@ struct ViewConfig {
     sf::Color textColor = sf::Color::White;
 
     // Font
-    std::string fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    std::string fontAssetId = "default_font";
 };
 
 class View {
@@ -54,6 +55,13 @@ public:
         return config_;
     }
 
+    // ========== Font management ==========
+
+    void setFontManager(core::ResourceManager<sf::Font>* manager) {
+        fontManager_ = manager;
+        loadFontAsset();
+    }
+
     // ========== Coordinate transformation ==========
 
     sf::Vector2f screenToWorld(const sf::Vector2i& screen_point) const;
@@ -82,6 +90,7 @@ private:
 
     // Support functions
 
+    void loadFontAsset() const;
     sf::Font& getFont() const;
     sf::Text createText(
         const std::string& str, unsigned int size, const sf::Color& color, float x, float y) const;
@@ -96,8 +105,9 @@ private:
     int frameCount_ = 0;
     float fpsTimer_ = 0.0F;
 
-    mutable sf::Font font_;
+    mutable std::shared_ptr<sf::Font> font_;
     mutable bool fontLoaded_ = false;
+    core::ResourceManager<sf::Font>* fontManager_ = nullptr;
 
     mutable std::vector<std::shared_ptr<core::GameObject>> sortedObjects_;
 };

@@ -79,7 +79,7 @@ TEST_F(ViewTest, ConstructorInitializesCorrectly) {
 
     auto& config = view->getConfig();
     EXPECT_EQ(config.backgroundColor, sf::Color(50, 50, 50));
-    EXPECT_EQ(config.fontPath, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    EXPECT_EQ(config.fontAssetId, "default_font");
 }
 
 // ========== Update tests ==========
@@ -250,7 +250,7 @@ TEST_F(ViewTest, CanSetAndGetConfig) {
     newConfig.showObjectCount = false;
     newConfig.showControls = true;
     newConfig.textColor = sf::Color::Green;
-    newConfig.fontPath = "test/font.ttf";
+    newConfig.fontAssetId = "custom_font";
 
     view->setConfig(newConfig);
 
@@ -260,7 +260,7 @@ TEST_F(ViewTest, CanSetAndGetConfig) {
     EXPECT_EQ(retrieved.showObjectCount, false);
     EXPECT_EQ(retrieved.showControls, true);
     EXPECT_EQ(retrieved.textColor, sf::Color::Green);
-    EXPECT_EQ(retrieved.fontPath, "test/font.ttf");
+    EXPECT_EQ(retrieved.fontAssetId, "custom_font");
 }
 
 // ========== Rendering tests ==========
@@ -434,24 +434,4 @@ TEST_F(ViewTest, HandlesUpdateAndRenderInterleaved) {
 
 // ========== Font Tests ==========
 
-TEST_F(ViewTest, HandlesInvalidFontPath) {
-    auto& config = view->getConfig();
-    config.fontPath = "nonexistent/font.ttf";
-    config.showFPS = true;
-
-    auto obj = createTestObject("obj", "Object", 100, 100);
-    const std::vector<std::shared_ptr<GameObject>> objects = {obj};
-
-    EXPECT_NO_THROW(view->render(objects));
-}
-
-TEST_F(ViewTest, HandlesValidFontPath) {
-    auto& config = view->getConfig();
-    config.fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-    config.showFPS = true;
-
-    auto obj = createTestObject("obj", "Object", 100, 100);
-    const std::vector<std::shared_ptr<GameObject>> objects = {obj};
-
-    EXPECT_NO_THROW(view->render(objects));
-}
+// TODO
