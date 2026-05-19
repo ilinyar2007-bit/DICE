@@ -75,11 +75,7 @@ void Application::initResources() {
     }
     textures_.setFallback(fallback);
 
-    std::vector<std::string> fontPaths = {"assets/fonts/OpenSans.ttf",
-                                          "assets/fonts/arial.ttf",
-                                          "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                                          "/usr/share/fonts/truetype/liberation/LiberationSans.ttf",
-                                          "C:/Windows/Fonts/arial.ttf"};
+    std::vector<std::string> fontPaths = {"assets/fonts/OpenSans-Regular.ttf"};
 
     bool fontLoaded = false;
     for (const auto& path : fontPaths) {
