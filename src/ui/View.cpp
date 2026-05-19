@@ -1,5 +1,6 @@
 #include "ui/View.hpp"
 
+#include <cassert>
 #include <ranges>
 
 namespace dice::view {
@@ -190,9 +191,7 @@ void View::loadFontAsset() const {
 }
 
 sf::Font& View::getFont() const {
-    if (!fontLoaded_) {
-        loadFontAsset();
-    }
+    assert(fontLoaded_ && font_ != nullptr && "getFont() called before font was successfully loaded");
     return *font_;
 }
 
