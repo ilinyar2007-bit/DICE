@@ -13,6 +13,7 @@ LuaScriptEngine::LuaScriptEngine() {
     initLibraries();
     registerGameObjectType();
     registerStandardCallbacks();
+    registerEngineTable();
 }
 
 void LuaScriptEngine::initLibraries() {
@@ -22,16 +23,23 @@ void LuaScriptEngine::initLibraries() {
 void LuaScriptEngine::registerGameObjectType() {
     lua_.new_usertype<dice::core::GameObject>(
         "GameObject",
+        // позиция
         "getX",
-        [](const dice::core::GameObject& obj) { return obj.getPosition().x; },
+        [](const dice::core::GameObject& o) { return o.getPosition().x; },
         "getY",
-        [](const dice::core::GameObject& obj) { return obj.getPosition().y; },
+        [](const dice::core::GameObject& o) { return o.getPosition().y; },
         "setPosition",
-        [](dice::core::GameObject& obj, float x, float y) { obj.setPosition(x, y); },
+        [](dice::core::GameObject& o, float x, float y) { o.setPosition(x, y); },
+        // идентификация
+        "getId",
+        &dice::core::GameObject::getId,
         "getName",
         &dice::core::GameObject::getName,
         "setName",
         &dice::core::GameObject::setName,
+        "getType",
+        &dice::core::GameObject::getType,
+        // состояние
         "isActive",
         &dice::core::GameObject::isActive,
         "setActive",
@@ -39,7 +47,55 @@ void LuaScriptEngine::registerGameObjectType() {
         "isVisible",
         &dice::core::GameObject::isVisible,
         "setVisible",
-        &dice::core::GameObject::setVisible);
+        &dice::core::GameObject::setVisible,
+        // z-порядок
+        "getZOrder",
+        &dice::core::GameObject::getZOrder,
+        "setZOrder",
+        &dice::core::GameObject::setZOrder,
+        // трансформации (sf::Transformable)
+        "getRotation",
+        [](const dice::core::GameObject& o) { return o.getRotation(); },
+        "setRotation",
+        [](dice::core::GameObject& o, float a) { o.setRotation(a); },
+        "getScaleX",
+        [](const dice::core::GameObject& o) { return o.getScale().x; },
+        "getScaleY",
+        [](const dice::core::GameObject& o) { return o.getScale().y; },
+        "setScale",
+        [](dice::core::GameObject& o, float x, float y) { o.setScale(x, y); },
+        // свойства
+        "getIntProperty",
+        [](const dice::core::GameObject& o, const std::string& k, int d) {
+            return o.getProperty<int>(k, d);
+        },
+        "getFloatProperty",
+        [](const dice::core::GameObject& o, const std::string& k, float d) {
+            return o.getProperty<float>(k, d);
+        },
+        "getStringProperty",
+        [](const dice::core::GameObject& o, const std::string& k, const std::string& d) {
+            return o.getProperty<std::string>(k, d);
+        },
+        "getBoolProperty",
+        [](const dice::core::GameObject& o, const std::string& k, bool d) {
+            return o.getProperty<bool>(k, d);
+        },
+        "setIntProperty",
+        [](dice::core::GameObject& o, const std::string& k, int v) { o.setProperty<int>(k, v); },
+        "setStringProperty",
+        [](dice::core::GameObject& o, const std::string& k, const std::string& v) {
+            o.setProperty<std::string>(k, v);
+        });
+}
+
+void LuaScriptEngine::registerEngineTable() {
+    sol::table engine = lua_.create_named_table("engine");
+    engine.set_function(
+        "on",
+        [this](const std::string& obj_id, const std::string& event, sol::protected_function fn) {
+            inlineCallbacks_[obj_id][event] = std::move(fn);
+        });
 }
 
 void LuaScriptEngine::registerStandardCallbacks() {
@@ -61,6 +117,7 @@ void LuaScriptEngine::registerCallback(const std::string& name, UiCallback callb
         }
     });
 }
+
 
 sol::environment LuaScriptEngine::makeEnvironment() {
     return {lua_, sol::create, lua_.globals()};
@@ -112,11 +169,41 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
     if (obj == nullptr) {
         return false;
     }
-    auto it = scriptRegistry_.find(obj->getId());
-    if (it == scriptRegistry_.end()) {
+    bool fired = false;
+
+    auto sit = scriptRegistry_.find(obj->getId());
+    if (sit != scriptRegistry_.end()) {
+        fired |= sit->second->trigger(event_name, obj);
+    }
+
+    auto cit = inlineCallbacks_.find(obj->getId());
+    if (cit != inlineCallbacks_.end()) {
+        auto eit = cit->second.find(event_name);
+        if (eit != cit->second.end()) {
+            auto result = eit->second(obj);
+            if (!result.valid()) {
+                const sol::error err = result;
+                spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
+                              event_name,
+                              obj->getId(),
+                              err.what());
+            }
+            fired = true;
+        }
+    }
+
+    return fired;
+}
+
+bool LuaScriptEngine::executeGlobalScript(const std::filesystem::path& path) {
+    auto result = lua_.script_file(path.string(), sol::script_pass_on_error);
+    if (!result.valid()) {
+        const sol::error err = result;
+        spdlog::error("LuaScriptEngine: global script error '{}': {}", path.string(), err.what());
         return false;
     }
-    return it->second->trigger(event_name, obj);
+    spdlog::debug("LuaScriptEngine: executed global script '{}'", path.string());
+    return true;
 }
 
 void LuaScriptEngine::detachScript(const std::string& object_id) {

@@ -1,110 +1,77 @@
-#include <iostream>
 #include <memory>
-#include <vector>
 
 #include <SFML/Graphics.hpp>
+#include <nlohmann/json.hpp>
 
-#include "components/Card.hpp"
-#include "components/Chip.hpp"
-#include "core/GameObject.hpp"
+#include "controller/Controller.hpp"
+#include "core/Model.hpp"
+#include "core/ResourceManager.hpp"
+#include "scene/DefaultFactory.hpp"
+#include "scripting/LuaScriptEngine.hpp"
 #include "ui/View.hpp"
 #include <spdlog/spdlog.h>
 
-using dice::components::Card;
-using dice::components::Chip;
-using dice::core::GameObject;
+using dice::controller::Controller;
+using dice::core::Model;
+using dice::core::ResourceManager;
+using dice::scene::makeDefaultFactory;
+using dice::scripting::LuaScriptEngine;
 using dice::view::View;
 using dice::view::ViewConfig;
 
-// Function for creating textures
-sf::Texture createColoredTexture(int width, int height, const sf::Color& color) {
-    sf::Texture texture;
-    texture.create(width, height);
-    sf::Image image;
-    image.create(width, height, color);
-    texture.update(image);
-    return texture;
-}
-
 int main() {
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::info("DICE Application Starting...");
+    spdlog::set_level(spdlog::level::info);
+    spdlog::info("DICE engine starting");
 
-    sf::RenderWindow window(sf::VideoMode(1280, 720), "DICE");
+    sf::RenderWindow window(sf::VideoMode(1280, 720), "DICE — игра в кости");
     window.setFramerateLimit(60);
 
+    auto baseTex = std::make_shared<sf::Texture>();
+    {
+        sf::Image img;
+        img.create(100, 100, sf::Color::White);
+        baseTex->loadFromImage(img);
+    }
+
+    ResourceManager<sf::Texture> textures;
+    textures.setFallback(baseTex);
+
     View view(window);
+    ViewConfig vcfg;
+    vcfg.backgroundColor = sf::Color(20, 20, 30);
+    vcfg.showFPS = false;
+    vcfg.showObjectCount = false;
+    vcfg.showControls = false;
+    view.setConfig(vcfg);
 
-    ViewConfig config;
-    config.backgroundColor = sf::Color(30, 30, 40);
-    config.showFPS = true;
-    config.showObjectCount = true;
-    config.showControls = true;
-    view.setConfig(config);
+    sf::Font font;
+    const bool fontOk = font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    if (fontOk) {
+        spdlog::info("Font loaded");
+    } else {
+        spdlog::warn("Font not found — text will use fallback");
+    }
 
-    // Creating textures
-    const sf::Texture cardFrontTex = createColoredTexture(100, 140, sf::Color(220, 220, 255));
-    const sf::Texture cardBackTex = createColoredTexture(100, 140, sf::Color(80, 80, 120));
-    const sf::Texture chipTex = createColoredTexture(64, 64, sf::Color::Red);
-    const sf::Texture blueChipTex = createColoredTexture(64, 64, sf::Color(100, 100, 255));
-    const sf::Texture boardTex = createColoredTexture(800, 600, sf::Color(150, 150, 150));
+    Model model(makeDefaultFactory());
+    LuaScriptEngine luaEngine;
 
-    std::vector<std::shared_ptr<GameObject>> objects;
+    Controller controller(model, view, luaEngine, window);
+    controller.registerDefaultFunctions(textures, font, fontOk);
 
-    // Board
-    auto board = std::make_shared<GameObject>("board", "Board");
-    board->setTexture(&boardTex);
-    board->setColor(sf::Color(200, 180, 140));
-    board->setScale(1.6F, 1.2F);
-    board->setPosition(640, 360);
-    board->setZOrder(0);
-    objects.push_back(board);
+    if (!luaEngine.executeGlobalScript("scripts/game.lua")) {
+        spdlog::error("Failed to load scripts/game.lua — run from project root!");
+        return 1;
+    }
+    if (!controller.loadScene("scenes/demo.json")) {
+        spdlog::error("Failed to load scenes/demo.json");
+        return 1;
+    }
+    controller.loadTextures(textures);
+    spdlog::info("Textures loaded");
 
-    // Cards
-    auto card1 = std::make_shared<Card>("card1", "Dragon");
-    card1->setFrontTexture(&cardFrontTex);
-    card1->setBackTexture(&cardBackTex);
-    card1->setPosition(300, 300);
-    card1->setZOrder(10);
-    card1->setPlayer(1);
-    card1->setFaceUp(true);
-    objects.push_back(card1);
-
-    auto card2 = std::make_shared<Card>("card2", "Mage");
-    card2->setFrontTexture(&cardFrontTex);
-    card2->setBackTexture(&cardBackTex);
-    card2->setPosition(420, 320);
-    card2->setZOrder(11);
-    card2->setPlayer(2);
-    card2->setFaceUp(false);
-    objects.push_back(card2);
-
-    // Chips
-    auto chip1 = std::make_shared<Chip>("chip1", "Red Chip");
-    chip1->setTexture(&chipTex);
-    chip1->setRadius(30.0F);
-    chip1->setPosition(600, 350);
-    chip1->setZOrder(20);
-    chip1->setPlayer(1);
-    objects.push_back(chip1);
-
-    auto chip2 = std::make_shared<Chip>("chip2", "Blue Chip");
-    chip2->setTexture(&blueChipTex);
-    chip2->setRadius(30.0F);
-    chip2->setPosition(700, 380);
-    chip2->setZOrder(20);
-    chip2->setPlayer(2);
-    objects.push_back(chip2);
-
-    spdlog::info("Created {} objects", objects.size());
-
-    // Variables for interaction
     sf::Clock clock;
-
-    spdlog::info("Entering main loop...");
-
     while (window.isOpen()) {
-        const float deltaTime = clock.restart().asSeconds();
+        const float dt = clock.restart().asSeconds();
 
         sf::Event event{};
         while (window.pollEvent(event)) {
@@ -115,14 +82,14 @@ int main() {
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
                 window.close();
             }
-
-            view.handleEvent(event);
+            controller.handleEvent(event);
         }
 
-        view.update(deltaTime);
+        controller.update(dt);
 
-        view.render(objects);
-
+        const auto objs = controller.collectObjects();
+        view.render(objs);
+        luaEngine.callGlobal("draw");
         window.display();
     }
 

@@ -7,11 +7,11 @@
 namespace dice::core {
 
 GameObject::GameObject()
-    : id_(""), name_("Unnamed"), type_("generic"), description_(""), zOrder_(0), parent_(nullptr),
-      active_(true), visible_(true), draggable_(true) {}
+    : name_("Unnamed"), type_("generic"), zOrder_(0), parent_(nullptr), active_(true),
+      visible_(true), draggable_(true) {}
 
-GameObject::GameObject(const std::string& id, const std::string& name)
-    : id_(id), name_(name), type_("generic"), description_(""), zOrder_(0), parent_(nullptr),
+GameObject::GameObject(std::string id, std::string name)
+    : id_(std::move(id)), name_(std::move(name)), type_("generic"), zOrder_(0), parent_(nullptr),
       active_(true), visible_(true), draggable_(true) {}
 
 // ========== Metadata ==========
@@ -38,10 +38,10 @@ bool GameObject::hasTag(const std::string& tag) const {
 // ========== Visual representation ==========
 
 void GameObject::setTexture(const sf::Texture* texture) {
-    if (texture) {
+    if (texture != nullptr) {
         sprite_.setTexture(*texture, true);
         auto bounds = sprite_.getLocalBounds();
-        sprite_.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
+        sprite_.setOrigin(bounds.width / 2.F, bounds.height / 2.F);
         spdlog::debug("Set texture for object '{}'", id_);
     }
 }
@@ -89,23 +89,23 @@ void GameObject::addChild(std::shared_ptr<GameObject> child) {
     }
 }
 
-void GameObject::removeChild(const std::string& childId) {
-    auto it = std::find_if(children_.begin(), children_.end(), [&childId](const auto& c) {
-        return c->getId() == childId;
+void GameObject::removeChild(const std::string& child_id) {
+    auto it = std::find_if(children_.begin(), children_.end(), [&child_id](const auto& c) {
+        return c->getId() == child_id;
     });
 
     if (it != children_.end()) {
         (*it)->setParent(nullptr);
         children_.erase(it);
-        spdlog::debug("Removed child '{}' from object '{}'", childId, id_);
+        spdlog::debug("Removed child '{}' from object '{}'", child_id, id_);
     } else {
-        spdlog::warn("Child '{}' not found in object '{}'", childId, id_);
+        spdlog::warn("Child '{}' not found in object '{}'", child_id, id_);
     }
 }
 
-std::shared_ptr<GameObject> GameObject::getChild(const std::string& childId) {
-    auto it = std::find_if(children_.begin(), children_.end(), [&childId](const auto& c) {
-        return c->getId() == childId;
+std::shared_ptr<GameObject> GameObject::getChild(const std::string& child_id) {
+    auto it = std::find_if(children_.begin(), children_.end(), [&child_id](const auto& c) {
+        return c->getId() == child_id;
     });
 
     if (it != children_.end()) {
@@ -117,20 +117,22 @@ std::shared_ptr<GameObject> GameObject::getChild(const std::string& childId) {
 
 // ========== Updating and rendering ==========
 
-void GameObject::update(float deltaTime) {
-    if (!active_)
+void GameObject::update(float delta_time) { // NOLINT(misc-no-recursion)
+    if (!active_) {
         return;
+    }
 
     for (auto& child : children_) {
         if (child && child->isActive()) {
-            child->update(deltaTime);
+            child->update(delta_time);
         }
     }
 }
 
 void GameObject::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-    if (!visible_)
+    if (!visible_) {
         return;
+    }
 
     states.transform *= getTransform();
 
@@ -145,7 +147,7 @@ void GameObject::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 
 // ========== Serialization ==========
 
-nlohmann::json GameObject::toJson() const {
+nlohmann::json GameObject::toJson() const { // NOLINT(misc-no-recursion)
     nlohmann::json json;
 
     json["id"] = id_;
@@ -174,6 +176,10 @@ nlohmann::json GameObject::toJson() const {
         json["luaScript"] = luaScript_;
     }
 
+    if (!textureFile_.empty()) {
+        json["textureFile"] = textureFile_;
+    }
+
     if (!children_.empty()) {
         nlohmann::json childrenJson = nlohmann::json::array();
         for (const auto& child : children_) {
@@ -188,14 +194,18 @@ nlohmann::json GameObject::toJson() const {
 }
 
 void GameObject::fromJson(const nlohmann::json& json) {
-    if (json.contains("id"))
+    if (json.contains("id")) {
         id_ = json["id"];
-    if (json.contains("name"))
+    }
+    if (json.contains("name")) {
         name_ = json["name"];
-    if (json.contains("type"))
+    }
+    if (json.contains("type")) {
         type_ = json["type"];
-    if (json.contains("description"))
+    }
+    if (json.contains("description")) {
         description_ = json["description"];
+    }
 
     if (json.contains("tags")) {
         tags_ = json["tags"].get<std::vector<std::string>>();
@@ -221,12 +231,15 @@ void GameObject::fromJson(const nlohmann::json& json) {
         zOrder_ = json["zOrder"];
     }
 
-    if (json.contains("active"))
+    if (json.contains("active")) {
         active_ = json["active"];
-    if (json.contains("visible"))
+    }
+    if (json.contains("visible")) {
         visible_ = json["visible"];
-    if (json.contains("draggable"))
+    }
+    if (json.contains("draggable")) {
         draggable_ = json["draggable"];
+    }
 
     if (json.contains("properties")) {
         properties_ = json["properties"].get<std::unordered_map<std::string, nlohmann::json>>();
@@ -234,6 +247,10 @@ void GameObject::fromJson(const nlohmann::json& json) {
 
     if (json.contains("luaScript")) {
         luaScript_ = json["luaScript"];
+    }
+
+    if (json.contains("textureFile")) {
+        textureFile_ = json["textureFile"];
     }
 
     spdlog::debug("Loaded GameObject '{}' from JSON", id_);

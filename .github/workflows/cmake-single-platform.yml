@@ -1,0 +1,70 @@
+name: Build and test on Linux
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: RelWithDebInfo
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # ----------------------------
+    # Dependencies
+    # ----------------------------
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          lua5.3 \
+          liblua5.3-dev \
+          xvfb \
+          valgrind \
+          ninja-build \
+          libx11-dev \
+          libxrandr-dev \
+          libxi-dev \
+          libxcursor-dev \
+          libxinerama-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libudev-dev \
+          libfreetype6-dev \
+          libopenal-dev \
+          libvorbis-dev \
+          libflac-dev
+
+    # ----------------------------
+    # Configure CMake
+    # ----------------------------
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DENABLE_SANITIZERS=ON
+
+    # ----------------------------
+    # Build
+    # ----------------------------
+    - name: Build
+      run: cmake --build build -j
+
+    # ----------------------------
+    # Run tests
+    # ----------------------------
+    - name: Run tests (ctest)
+      working-directory: build
+      run: |
+        ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1 \
+        UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+        xvfb-run -a ctest --output-on-failure --parallel 2

@@ -107,6 +107,7 @@ add_library(dice_core STATIC
   src/components/Card.cpp
   src/core/Action.cpp
   src/core/ActionManager.cpp
+  src/core/SceneValidator.cpp
 )
 
 target_include_directories(dice_core
@@ -155,6 +156,23 @@ else()
 endif()
 
 # ----------------------------
+# Controller library
+# ----------------------------
+add_library(dice_controller STATIC
+  src/controller/Controller.cpp
+)
+
+target_include_directories(dice_controller
+  PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(dice_controller
+  PUBLIC
+    dice_scripting
+)
+
+# ----------------------------
 # Application
 # ----------------------------
 add_executable(${PROJECT_NAME}
@@ -168,12 +186,22 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
-    dice_scripting
+    dice_controller
     sfml-network
     imgui_lib
     spdlog::spdlog
     nlohmann_json::nlohmann_json
 )
+
+set(RESOURCE_DIRS assets scripts scenes)
+
+foreach(dir IN LISTS RESOURCE_DIRS)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/${dir}
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>/${dir}
+  )
+endforeach()
 
 # ----------------------------
 # Tests
@@ -188,6 +216,7 @@ add_executable(dice_tests
   tests/core/test_ResourceManager.cpp
   tests/core/test_Action.cpp
   tests/core/test_ActionManager.cpp
+  tests/core/test_SceneValidator.cpp
 )
 
 target_link_libraries(dice_tests
@@ -209,6 +238,22 @@ target_link_libraries(dice_scripting_tests
 include(GoogleTest)
 gtest_discover_tests(dice_tests)
 gtest_discover_tests(dice_scripting_tests)
+
+option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
+
+if (ENABLE_SANITIZERS AND UNIX AND NOT APPLE)
+  message(STATUS "Sanitizers enabled")
+
+  set(SAN_FLAGS -fsanitize=address,undefined)
+
+  add_compile_options(
+    ${SAN_FLAGS}
+    -fno-omit-frame-pointer
+    -g
+  )
+
+  add_link_options(${SAN_FLAGS})
+endif()
 
 # ----------------------------
 # Application compile options

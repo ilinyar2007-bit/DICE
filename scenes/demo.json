@@ -1,0 +1,73 @@
+{
+  "objects": [
+    {
+      "type": "GameObject",
+      "id": "board",
+      "name": "Game Board",
+      "description": "Main playing field",
+      "tags": ["field"],
+      "position": [640, 340],
+      "rotation": 0.0,
+      "scale": [8.5, 5.5],
+      "color": [255, 255, 255, 255],
+      "textureFile": "assets/board.png",
+      "zOrder": 0,
+      "active": true,
+      "visible": true,
+      "draggable": false,
+      "properties": {}
+    },
+    {
+      "type": "GameObject",
+      "id": "dice_1",
+      "name": "Кубик игрока 1",
+      "description": "Белый кубик — Игрок 1",
+      "tags": ["dice", "player1"],
+      "position": [390, 300],
+      "rotation": 0.0,
+      "scale": [1.0, 1.0],
+      "color": [255, 255, 255, 255],
+      "textureFile": "assets/dieWhitтe_border1.png",
+      "zOrder": 10,
+      "active": true,
+      "visible": true,
+      "draggable": true,
+      "luaScript": "scripts/dice.lua",
+      "properties": {"player": 1}
+    },
+    {
+      "type": "GameObject",
+      "id": "dice_2",
+      "name": "Кубик игрока 2",
+      "description": "Красный кубик — Игрок 2",
+      "tags": ["dice", "player2"],
+      "position": [400, 400],
+      "rotation": 0.0,
+      "scale": [1.0, 1.0],
+      "color": [255, 255, 255, 255],
+      "textureFile": "assets/dieRed_border1.png",
+      "zOrder": 10,
+      "active": true,
+      "visible": true,
+      "draggable": true,
+      "luaScript": "scripts/dice.lua",
+      "properties": {"player": 2}
+    },
+    {
+      "type": "GameObject",
+      "id": "end_turn_btn",
+      "name": "Закончить ход",
+      "description": "Кнопка окончания хода",
+      "tags": ["button"],
+      "position": [640, 660],
+      "rotation": 0.0,
+      "scale": [2.0, 0.7],
+      "color": [150, 150, 150, 200],
+      "textureFile": "assets/button.png",
+      "zOrder": 5,
+      "active": true,
+      "visible": true,
+      "draggable": false
+    }
+  ]
+}

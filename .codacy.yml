@@ -1,0 +1,4 @@
+engines:
+  cppcheck:
+    enabled: true
+    extraArgs: "--suppress=missingInclude --suppress=missingIncludeSystem"
