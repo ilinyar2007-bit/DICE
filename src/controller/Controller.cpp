@@ -14,10 +14,10 @@ namespace dice::controller {
 Controller::Controller(dice::core::Model& model,
                        dice::view::View& view,
                        dice::scripting::LuaScriptEngine& lua,
-                       sf::RenderWindow& window)
-    : model_(model), view_(view), lua_(lua), window_(window),
-      fieldBounds_(0.F,
-                   0.F,
+                       sf::RenderWindow& window,
+                       dice::core::ResourceManager<sf::Texture>& textures)
+    : model_(model), view_(view), lua_(lua), window_(window), textures_(textures),
+      fieldBounds_(0.F, 0.F,
                    static_cast<float>(window.getSize().x),
                    static_cast<float>(window.getSize().y)) {}
 
@@ -27,22 +27,46 @@ bool Controller::loadScene(const std::filesystem::path& path) {
         spdlog::error("Controller: cannot open scene '{}'", path.string());
         return false;
     }
-    model_.fromJson(nlohmann::json::parse(file));
+
+    nlohmann::json sceneJson;
+    try {
+        sceneJson = nlohmann::json::parse(file);
+    } catch (const nlohmann::json::parse_error& e) {
+        spdlog::error("Controller: failed to parse scene '{}': {}", path.string(), e.what());
+        return false;
+    }
+
+    lua_.clearSceneState();
+
+    if (sceneJson.contains("scripts") && sceneJson["scripts"].is_array()) {
+        for (const auto& entry : sceneJson["scripts"]) {
+            if (entry.is_string()) {
+                lua_.executeGlobalScript(entry.get<std::string>());
+            }
+        }
+    }
+
+    model_.clear();
+    model_.fromJson(sceneJson);
+
+    loadedTextureIds_.clear();
+    loadTexturesForModel();
     refreshFieldBounds();
+
+    currentScenePath_ = path.string();
     spdlog::info("Controller: scene '{}' loaded", path.string());
     return true;
 }
 
-void Controller::loadTextures(dice::core::ResourceManager<sf::Texture>& textures) {
+void Controller::loadTexturesForModel() {
     model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
         const std::string& tf = obj->getTextureFile();
+        if (!tf.empty() && !loadedTextureIds_.contains(tf)) {
+            textures_.load(tf, tf);
+            loadedTextureIds_.insert(tf);
+        }
         if (!tf.empty()) {
-            if (!loadedTextureIds_.contains(tf)) {
-                textures.load(tf, tf);
-                loadedTextureIds_.insert(tf);
-                spdlog::info("Controller: texture loaded '{}'", tf);
-            }
-            obj->setTexture(textures.get(tf).get());
+            obj->setTexture(textures_.get(tf).get());
         }
         if (!obj->getLuaScript().empty()) {
             lua_.attachScript(*obj);
@@ -50,8 +74,7 @@ void Controller::loadTextures(dice::core::ResourceManager<sf::Texture>& textures
     });
 }
 
-void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Texture>& textures,
-                                          const sf::Font* font) {
+void Controller::registerDefaultFunctions(const sf::Font* font) {
     lua_.registerFunction("cpp_rand", [](int lo, int hi) -> int {
         static std::mt19937 rng(std::random_device{}());
         return std::uniform_int_distribution<int>(lo, hi)(rng);
@@ -123,16 +146,16 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
                           });
 
     lua_.registerFunction("cpp_set_obj_texture",
-                          [this, &textures](const std::string& obj_id, const std::string& path) {
+                          [this](const std::string& obj_id, const std::string& path) {
                               auto obj = model_.getObject(obj_id);
                               if (!obj) {
                                   return;
                               }
                               if (!loadedTextureIds_.contains(path)) {
-                                  textures.load(path, path);
+                                  textures_.load(path, path);
                                   loadedTextureIds_.insert(path);
                               }
-                              obj->setTexture(textures.get(path).get());
+                              obj->setTexture(textures_.get(path).get());
                           });
 }
 
@@ -155,6 +178,12 @@ void Controller::handleEvent(const sf::Event& event) {
 }
 
 void Controller::update(float dt) {
+    if (!pendingScenePath_.empty()) {
+        std::string path = pendingScenePath_;
+        pendingScenePath_.clear();
+        loadScene(path);
+        return;
+    }
     lua_.callGlobal("update", dt);
     view_.update(dt);
 }

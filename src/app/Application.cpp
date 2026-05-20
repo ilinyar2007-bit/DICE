@@ -6,7 +6,10 @@ namespace fs = std::filesystem;
 
 namespace dice {
 
-Application::Application() : view_(window_), controller_(model_, view_, lua_, window_) {
+Application::Application()
+    : view_(window_),
+      controller_(model_, view_, lua_, window_, textures_) {
+    model_.setFactory(dice::scene::makeDefaultFactory());
     initialized_ = false;
 }
 
@@ -113,7 +116,7 @@ void Application::initView() {
 void Application::initController() {
     auto fontId = config_.fonts.empty() ? "default_font" : config_.fonts[0].id;
     auto font = fonts_.get(fontId);
-    controller_.registerDefaultFunctions(textures_, font.get());
+    controller_.registerDefaultFunctions(font.get());
     controller_.loadScene(config_.startScene);
     spdlog::info("Controller initialized");
 }

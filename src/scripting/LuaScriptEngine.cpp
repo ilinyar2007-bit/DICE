@@ -211,4 +211,6 @@ void LuaScriptEngine::detachScript(const std::string& object_id) {
     spdlog::debug("LuaScriptEngine: detached script from object '{}'", object_id);
 }
 
+void LuaScriptEngine::clearSceneState() {}
+
 } // namespace dice::scripting

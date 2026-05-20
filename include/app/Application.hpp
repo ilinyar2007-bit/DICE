@@ -10,6 +10,7 @@
 #include "controller/Controller.hpp"
 #include "core/Model.hpp"
 #include "core/ResourceManager.hpp"
+#include "scene/DefaultFactory.hpp"
 #include "scripting/LuaScriptEngine.hpp"
 #include "ui/View.hpp"
 #include <spdlog/spdlog.h>

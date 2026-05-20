@@ -55,19 +55,14 @@ int main() {
     Model model(makeDefaultFactory());
     LuaScriptEngine luaEngine;
 
-    Controller controller(model, view, luaEngine, window);
-    controller.registerDefaultFunctions(textures, fontOk ? &font : nullptr);
+    Controller controller(model, view, luaEngine, window, textures);
+    controller.registerDefaultFunctions(fontOk ? &font : nullptr);
 
-    if (!luaEngine.executeGlobalScript("scripts/game.lua")) {
-        spdlog::error("Failed to load scripts/game.lua — run from project root!");
-        return 1;
-    }
     if (!controller.loadScene("scenes/demo.json")) {
         spdlog::error("Failed to load scenes/demo.json");
         return 1;
     }
-    controller.loadTextures(textures);
-    spdlog::info("Textures loaded");
+    spdlog::info("Scene loaded");
 
     sf::Clock clock;
     while (window.isOpen()) {

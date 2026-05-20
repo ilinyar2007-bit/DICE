@@ -54,6 +54,8 @@ public:
 
     bool executeGlobalScript(const std::filesystem::path& path);
 
+    void clearSceneState();
+
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
         sol::protected_function fn = lua_[name];
         if (!fn.valid())
