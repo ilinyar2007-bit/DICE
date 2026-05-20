@@ -104,7 +104,6 @@ add_library(dice_core STATIC
   src/components/Card.cpp
   src/ui/View.cpp
   src/core/Model.cpp
-  src/components/Card.cpp
   src/core/Action.cpp
   src/core/ActionManager.cpp
   src/core/SceneValidator.cpp
