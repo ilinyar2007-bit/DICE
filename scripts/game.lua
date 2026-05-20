@@ -1,10 +1,6 @@
+-- scripts/game.lua
 -- Game state and logic for the DICE demo.
--- Loaded once into the global Lua state via executeGlobalScript(),
--- so all per-object scripts (dice.lua, end_turn_btn.lua) can access it.
---
--- Engine hooks called by C++ each frame:
---   update(dt)  — visual state sync
---   draw()      — HUD rendering
+-- Loaded once per scene via "scripts" array in demo.json.
 
 game = {
     currentPlayer = 1,
@@ -16,63 +12,70 @@ game = {
     targetScore   = 21
 }
 
-function game.roll(player)
+-- ===== Trigger catalog =====
+
+engine.trigger("roll_dice", function(self)
+    local player = self:getIntProperty("player", 0)
     if game.gameOver or game.hasRolled or game.currentPlayer ~= player then
-        return 0
+        return
     end
     local roll = cpp_rand(1, 6)
     game.diceRoll[player]  = roll
     game.scores[player]    = game.scores[player] + roll
     game.hasRolled         = true
-    cpp_log("Player " .. player .. " rolled " .. roll ..
-            " — total: " .. game.scores[player])
+    cpp_log("Игрок " .. player .. " бросил " .. roll ..
+            " — итого: " .. game.scores[player])
     if game.scores[player] >= game.targetScore then
         game.gameOver = true
         game.winner   = player
-        cpp_log("Player " .. player .. " wins!")
+        cpp_log("Игрок " .. player .. " победил!")
     end
-    return roll
-end
+end)
 
-function game.endTurn()
+engine.trigger("end_turn", function(self)
     if game.gameOver or not game.hasRolled then return end
     game.currentPlayer = game.currentPlayer == 1 and 2 or 1
     game.hasRolled     = false
-    cpp_log("Turn passed to Player " .. game.currentPlayer)
-end
-
-engine.on("end_turn_btn", "on_click", function()
-    game.endTurn()
+    cpp_log("Ход передан Игроку " .. game.currentPlayer)
 end)
 
+-- ===== Keyboard =====
+
+engine.onKey("R", function()
+    engine.reloadScene()
+end)
+
+-- ===== Engine hooks =====
 
 function update(dt)
-    local function updateDie(objId, player, prefix)
+    local d1  = engine.getObject("dice_1")
+    local d2  = engine.getObject("dice_2")
+    local btn = engine.getObject("end_turn_btn")
+    if not d1 or not d2 or not btn then return end
+
+    local function updateDie(obj, player, prefix)
         local roll = game.diceRoll[player]
         if roll > 0 then
-            cpp_set_obj_texture(objId, "assets/" .. prefix .. roll .. ".png")
+            cpp_set_obj_texture(obj:getId(), "assets/" .. prefix .. roll .. ".png")
         end
-        local active = (game.currentPlayer == player)
-                       and not game.hasRolled and not game.gameOver
-        if active then
-            cpp_set_obj_color(objId, 255, 255, 255, 255)
+        if game.currentPlayer == player and not game.hasRolled and not game.gameOver then
+            obj:setColor(255, 255, 255, 255)
         else
-            cpp_set_obj_color(objId, 160, 150, 130, 180)
+            obj:setColor(160, 150, 130, 180)
         end
     end
 
-    updateDie("dice_1", 1, "dieWhite_border")
-    updateDie("dice_2", 2, "dieRed_border")
+    updateDie(d1, 1, "dieWhite_border")
+    updateDie(d2, 2, "dieRed_border")
 
     if game.gameOver then
-        cpp_set_obj_color("end_turn_btn", 80, 80, 80, 180)
+        btn:setColor(80, 80, 80, 180)
     elseif game.hasRolled then
-        cpp_set_obj_color("end_turn_btn", 80, 220, 100, 255)
+        btn:setColor(80, 220, 100, 255)
     else
-        cpp_set_obj_color("end_turn_btn", 150, 150, 150, 200)
+        btn:setColor(150, 150, 150, 200)
     end
 end
-
 
 function draw()
     local P1  = {220, 80,  80}
@@ -97,7 +100,7 @@ function draw()
     cpp_draw_text_center("Закончить ход", 640, 660, 22, table.unpack(btnColor))
 
     cpp_draw_text_left(
-        "Перемещай кубик | Кликни на своём кубике чтобы бросить | Закончить ход",
+        "Перемещай кубик | Кликни чтобы бросить | R — перезапуск",
         20, 700, 15, 130, 130, 130)
 
     if game.gameOver then
@@ -109,7 +112,7 @@ function draw()
             "Счёт: " .. game.scores[game.winner] .. " очков",
             640, 390, 36, 255, 255, 255)
         cpp_draw_text_center(
-            "Нажмите ESC для выхода",
+            "Нажмите R для перезапуска или ESC для выхода",
             640, 450, 24, 180, 180, 180)
     end
 end

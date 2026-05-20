@@ -6,11 +6,12 @@
     "clearR": 30,
     "clearG": 30,
     "clearB": 40,
-    "startScene": "scenes/demo.json",
+    "startScene": "scenes/nardi.json",
     "globalScript": "",
     "showFPS": true,
     "showObjectCount": true,
     "showControls": true,
+    "resizable": false,
     "fonts": [
         {
             "id": "default_font",

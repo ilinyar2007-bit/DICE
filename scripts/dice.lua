@@ -1,11 +1,6 @@
--- Unified dice handler.
--- Each die stores its player number in properties: {"player": N}
--- game.roll() is defined in scripts/game.lua (loaded as global).
-
-function on_click(self)
-    local player = self:getIntProperty("player", 0)
-    game.roll(player)
-end
+-- scripts/dice.lua
+-- Per-object script for dice (optional).
+-- on_click is now handled via "triggers" in JSON (engine.trigger "roll_dice").
 
 function on_move(self)
     cpp_log(self:getName() .. ": (" ..

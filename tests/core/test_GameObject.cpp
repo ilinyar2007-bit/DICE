@@ -41,7 +41,7 @@ TEST_F(GameObjectTest, DefaultConstructor) {
     EXPECT_EQ(obj.getType(), "generic");
     EXPECT_TRUE(obj.isActive());
     EXPECT_TRUE(obj.isVisible());
-    EXPECT_TRUE(obj.isDraggable());
+    EXPECT_FALSE(obj.isDraggable());
     EXPECT_EQ(obj.getZOrder(), 0);
 }
 
@@ -213,9 +213,9 @@ TEST_F(GameObjectTest, StateManagement) {
     obj.setVisible(false);
     EXPECT_FALSE(obj.isVisible());
 
-    EXPECT_TRUE(obj.isDraggable());
-    obj.setDraggable(false);
     EXPECT_FALSE(obj.isDraggable());
+    obj.setDraggable(true);
+    EXPECT_TRUE(obj.isDraggable());
 }
 
 // ========== Custom property tests ==========
@@ -334,4 +334,37 @@ TEST_F(GameObjectTest, UpdateWithChildren) {
     parent->update(0.016F);
 
     EXPECT_TRUE(parent->isActive());
+}
+
+// ========== Trigger Bindings Tests ==========
+
+TEST(GameObjectTriggerBindings, SetAndGet) {
+    dice::core::GameObject obj("obj1", "Object 1");
+    obj.setTriggerBinding("on_click", "roll_dice");
+    obj.setTriggerBinding("on_hover", "highlight");
+
+    const auto& bindings = obj.getTriggerBindings();
+    ASSERT_EQ(bindings.size(), 2u);
+    EXPECT_EQ(bindings.at("on_click"), "roll_dice");
+    EXPECT_EQ(bindings.at("on_hover"), "highlight");
+}
+
+TEST(GameObjectTriggerBindings, SerializeRoundtrip) {
+    dice::core::GameObject obj("obj1", "Object 1");
+    obj.setTriggerBinding("on_click", "roll_dice");
+
+    auto json = obj.toJson();
+    ASSERT_TRUE(json.contains("triggers"));
+    EXPECT_EQ(json["triggers"]["on_click"], "roll_dice");
+
+    dice::core::GameObject obj2("", "");
+    obj2.fromJson(json);
+    EXPECT_EQ(obj2.getTriggerBindings().at("on_click"), "roll_dice");
+}
+
+TEST(GameObjectTriggerBindings, MissingTriggersInJson) {
+    dice::core::GameObject obj("obj1", "Object 1");
+    nlohmann::json j = {{"id", "obj1"}, {"type", "GameObject"}};
+    obj.fromJson(j);
+    EXPECT_TRUE(obj.getTriggerBindings().empty());
 }

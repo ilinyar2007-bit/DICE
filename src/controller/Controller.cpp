@@ -9,6 +9,36 @@
 #include "scripting/LuaScript.hpp"
 #include <spdlog/spdlog.h>
 
+namespace {
+std::string keyToString(sf::Keyboard::Key key) {
+    switch (key) {
+        case sf::Keyboard::Space:  return "Space";
+        case sf::Keyboard::Enter:  return "Enter";
+        case sf::Keyboard::Tab:    return "Tab";
+        case sf::Keyboard::Up:     return "Up";
+        case sf::Keyboard::Down:   return "Down";
+        case sf::Keyboard::Left:   return "Left";
+        case sf::Keyboard::Right:  return "Right";
+        case sf::Keyboard::W:      return "W";
+        case sf::Keyboard::A:      return "A";
+        case sf::Keyboard::S:      return "S";
+        case sf::Keyboard::D:      return "D";
+        case sf::Keyboard::E:      return "E";
+        case sf::Keyboard::Q:      return "Q";
+        case sf::Keyboard::R:      return "R";
+        case sf::Keyboard::F:      return "F";
+        case sf::Keyboard::I:      return "I";
+        case sf::Keyboard::X:      return "X";
+        case sf::Keyboard::Num1:   return "1";
+        case sf::Keyboard::Num2:   return "2";
+        case sf::Keyboard::Num3:   return "3";
+        case sf::Keyboard::Num4:   return "4";
+        case sf::Keyboard::Num5:   return "5";
+        default:                   return "";
+    }
+}
+} // namespace
+
 namespace dice::controller {
 
 Controller::Controller(dice::core::Model& model,
@@ -35,6 +65,10 @@ bool Controller::loadScene(const std::filesystem::path& path) {
         spdlog::error("Controller: failed to parse scene '{}': {}", path.string(), e.what());
         return false;
     }
+
+    draggedObj_.reset();
+    hoveredObj_.reset();
+    wasDragging_ = false;
 
     lua_.clearSceneState();
 
@@ -157,6 +191,11 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
                               }
                               obj->setTexture(textures_.get(path).get());
                           });
+
+    lua_.setSceneLoadCallback([this](const std::string& path) {
+        pendingScenePath_ = path;
+    });
+    lua_.registerModelAccess(model_, [this]() { return currentScenePath_; });
 }
 
 void Controller::handleEvent(const sf::Event& event) {
@@ -173,6 +212,12 @@ void Controller::handleEvent(const sf::Event& event) {
     if (event.type == sf::Event::MouseButtonReleased &&
         event.mouseButton.button == sf::Mouse::Left) // NOLINT
         onMouseReleased(event.mouseButton);          // NOLINT
+
+    if (event.type == sf::Event::KeyPressed) {
+        const std::string keyName = keyToString(event.key.code); // NOLINT
+        if (!keyName.empty())
+            lua_.fireKeyEvent(keyName);
+    }
 
     view_.handleEvent(event);
 }
@@ -200,6 +245,14 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
     const auto objs = collectObjects();
     auto picked = view_.pickObject(wp, objs);
 
+    if (!picked) {
+        spdlog::info("Controller: click at ({},{}) — no object picked", ev.x, ev.y);
+    } else {
+        spdlog::info("Controller: click at ({},{}) — picked '{}' draggable={} visible={} active={}",
+            ev.x, ev.y, picked->getId(),
+            picked->isDraggable(), picked->isVisible(), picked->isActive());
+    }
+
     if (picked && picked->isDraggable()) {
         draggedObj_ = picked;
         dragOffset_ = picked->getPosition() - wp;
@@ -207,10 +260,10 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
         const auto b = picked->getGlobalBounds();
         chipHalfW_ = b.width / 2.F;
         chipHalfH_ = b.height / 2.F;
-        spdlog::debug("Controller: drag start '{}'", picked->getId());
+        spdlog::info("Controller: drag start '{}'", picked->getId());
         lua_.fireEvent(dice::scripting::kEventOnDragStart, draggedObj_.get());
     } else if (picked) {
-        spdlog::debug("Controller: click '{}'", picked->getId());
+        spdlog::info("Controller: click firing event on '{}'", picked->getId());
         lua_.fireEvent(dice::scripting::kEventOnClick, picked.get());
     }
 }
@@ -249,11 +302,13 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
 
 void Controller::onMouseReleased(const sf::Event::MouseButtonEvent& /*ev*/) {
     if (draggedObj_) {
+        spdlog::info("Controller: mouse released on '{}' wasDragging={}",
+            draggedObj_->getId(), wasDragging_);
         if (!wasDragging_) {
-            spdlog::debug("Controller: click (on release) '{}'", draggedObj_->getId());
+            spdlog::info("Controller: click (on release) '{}'", draggedObj_->getId());
             lua_.fireEvent(dice::scripting::kEventOnClick, draggedObj_.get());
         } else {
-            spdlog::debug("Controller: drag end '{}'", draggedObj_->getId());
+            spdlog::info("Controller: drag end '{}'", draggedObj_->getId());
         }
         lua_.fireEvent(dice::scripting::kEventOnDragEnd, draggedObj_.get());
         draggedObj_ = nullptr;

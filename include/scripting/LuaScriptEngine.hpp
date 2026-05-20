@@ -20,6 +20,8 @@ namespace dice::core {
 class GameObject;
 } // namespace dice::core
 
+namespace dice::core { class Model; }
+
 #include "scripting/LuaScript.hpp"
 
 namespace dice::scripting {
@@ -44,7 +46,11 @@ public:
 
     bool fireEvent(const std::string& event_name, dice::core::GameObject* obj);
 
+    void fireKeyEvent(const std::string& keyName);
+
     void detachScript(const std::string& object_id);
+
+    void unregisterObject(const std::string& object_id);
 
     void registerCallback(const std::string& name, UiCallback callback);
 
@@ -54,7 +60,14 @@ public:
 
     bool executeGlobalScript(const std::filesystem::path& path);
 
+    bool executeGlobalScriptFromSource(const std::string& source);
+
     void clearSceneState();
+
+    void registerModelAccess(dice::core::Model& model, std::function<std::string()> getCurrentPath);
+    void setSceneLoadCallback(std::function<void(const std::string&)> cb);
+
+    sol::state& getLua() { return lua_; }
 
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
         sol::protected_function fn = lua_[name];
@@ -73,6 +86,10 @@ private:
     std::unordered_map<std::string, UiCallback> callbacks_;
     std::unordered_map<std::string, std::unordered_map<std::string, sol::protected_function>>
         inlineCallbacks_;
+    std::unordered_map<std::string, sol::protected_function> triggerCatalog_;
+    std::unordered_map<std::string, sol::protected_function> keyHandlers_;
+
+    std::function<void(const std::string&)> sceneLoadCallback_;
 
     void initLibraries();
     void registerGameObjectType();

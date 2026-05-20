@@ -109,7 +109,7 @@ public:
     sf::FloatRect getLocalBounds() const;
 
     // Check if an object contains a point
-    bool contains(const sf::Vector2f& point) const;
+    virtual bool contains(const sf::Vector2f& point) const;
 
     // Check if an object contains a point
     bool intersects(const GameObject& other) const;
@@ -209,6 +209,20 @@ public:
         luaScript_ = script;
     }
 
+    // ========== Trigger bindings ==========
+
+    void setTriggerBinding(const std::string& event, const std::string& triggerName) {
+        triggerBindings_[event] = triggerName;
+    }
+
+    const std::unordered_map<std::string, std::string>& getTriggerBindings() const {
+        return triggerBindings_;
+    }
+
+    void clearTriggerBindings() {
+        triggerBindings_.clear();
+    }
+
     // ========== Texture file ==========
 
     const std::string& getTextureFile() const {
@@ -240,6 +254,7 @@ protected:
 
     std::string luaScript_;
     std::string textureFile_;
+    std::unordered_map<std::string, std::string> triggerBindings_;
 };
 
 } // namespace dice::core

@@ -93,7 +93,7 @@ void View::drawObjects(const std::vector<std::shared_ptr<core::GameObject>>& obj
     sortObjectsByZOrder(sortedObjects_);
 
     for (const auto& obj : sortedObjects_) {
-        if (obj->isVisible()) {
+        if (obj->isVisible() && obj->getParent() == nullptr) {
             drawObject(obj);
         }
     }

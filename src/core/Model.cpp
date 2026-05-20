@@ -86,7 +86,11 @@ void Model::registerRecursive(const std::shared_ptr<GameObject>& obj) { // NOLIN
 
 // NOLINTNEXTLINE(misc-no-recursion)
 void Model::unregisterRecursive(const std::shared_ptr<GameObject>& obj) {
-    objects_.erase(obj->getId());
+    const std::string id = obj->getId();
+    objects_.erase(id);
+    if (unregisterCallback_) {
+        unregisterCallback_(id);
+    }
     for (const auto& child : obj->getChildren()) {
         unregisterRecursive(child);
     }
