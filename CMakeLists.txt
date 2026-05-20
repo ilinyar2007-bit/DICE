@@ -159,6 +159,8 @@ endif()
 # ----------------------------
 add_library(dice_controller STATIC
   src/controller/Controller.cpp
+  src/app/Application.cpp
+  src/app/ConfigLoader.cpp
 )
 
 target_include_directories(dice_controller
