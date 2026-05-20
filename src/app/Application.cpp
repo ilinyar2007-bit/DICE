@@ -100,11 +100,11 @@ void Application::handleEvents() {
         if (event.type == sf::Event::Closed) {
             running_ = false;
         }
-        if (event.type == sf::Event::KeyPressed &&
-            event.key.code ==
-                sf::Keyboard::Escape) { // NOLINT(cppcoreguidelines-pro-type-union-access)
+        // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
+        if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
             running_ = false;
         }
+        // NOLINTEND(cppcoreguidelines-pro-type-union-access)
         controller_.handleEvent(event);
     }
 }
