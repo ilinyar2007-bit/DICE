@@ -45,4 +45,4 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppConfig,
 
 } // namespace dice
 
-#endif
+#endif // DICE_APP_APPCONFIG_HPP
