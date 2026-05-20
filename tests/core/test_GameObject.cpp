@@ -344,7 +344,7 @@ TEST(GameObjectTriggerBindings, SetAndGet) {
     obj.setTriggerBinding("on_hover", "highlight");
 
     const auto& bindings = obj.getTriggerBindings();
-    ASSERT_EQ(bindings.size(), 2u);
+    ASSERT_EQ(bindings.size(), 2U);
     EXPECT_EQ(bindings.at("on_click"), "roll_dice");
     EXPECT_EQ(bindings.at("on_hover"), "highlight");
 }
@@ -364,7 +364,7 @@ TEST(GameObjectTriggerBindings, SerializeRoundtrip) {
 
 TEST(GameObjectTriggerBindings, MissingTriggersInJson) {
     dice::core::GameObject obj("obj1", "Object 1");
-    nlohmann::json j = {{"id", "obj1"}, {"type", "GameObject"}};
+    const nlohmann::json j = {{"id", "obj1"}, {"type", "GameObject"}};
     obj.fromJson(j);
     EXPECT_TRUE(obj.getTriggerBindings().empty());
 }

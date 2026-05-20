@@ -73,7 +73,7 @@ void SceneValidator::checkSceneRoot(const nlohmann::json& scene_json) {
     }
 }
 
-void SceneValidator::checkObject(const nlohmann::json& obj) {
+void SceneValidator::checkObject(const nlohmann::json& obj) { // NOLINT(misc-no-recursion)
     if (!obj.is_object()) {
         addError(MessageCode::E_OBJECT_ENTRY_IS_NOT_AN_OBJECT, "Object entry must be object", obj);
         return;
@@ -272,33 +272,37 @@ void SceneValidator::checkProperties(const nlohmann::json& obj) {
 }
 
 void SceneValidator::checkScripts(const nlohmann::json& scene_json) {
-    if (!scene_json.contains("scripts")) return;
+    if (!scene_json.contains("scripts")) {
+        return;
+    }
     const auto& scripts = scene_json["scripts"];
     if (!scripts.is_array()) {
-        addError(MessageCode::E_SCRIPTS_IS_NOT_AN_ARRAY,
-                 "'scripts' must be an array", scene_json);
+        addError(MessageCode::E_SCRIPTS_IS_NOT_AN_ARRAY, "'scripts' must be an array", scene_json);
         return;
     }
     for (const auto& entry : scripts) {
         if (!entry.is_string()) {
             addError(MessageCode::E_SCRIPTS_ENTRY_IS_NOT_A_STRING,
-                     "each 'scripts' entry must be a string", entry);
+                     "each 'scripts' entry must be a string",
+                     entry);
         }
     }
 }
 
 void SceneValidator::checkTriggers(const nlohmann::json& obj) {
-    if (!obj.contains("triggers")) return;
+    if (!obj.contains("triggers")) {
+        return;
+    }
     const auto& triggers = obj["triggers"];
     if (!triggers.is_object()) {
-        addError(MessageCode::E_TRIGGERS_IS_NOT_AN_OBJECT,
-                 "'triggers' must be a JSON object", obj);
+        addError(MessageCode::E_TRIGGERS_IS_NOT_AN_OBJECT, "'triggers' must be a JSON object", obj);
         return;
     }
     for (const auto& [key, value] : triggers.items()) {
         if (!value.is_string()) {
             addError(MessageCode::E_TRIGGER_VALUE_IS_NOT_A_STRING,
-                     "'triggers' values must be strings", obj);
+                     "'triggers' values must be strings",
+                     obj);
         }
     }
 }

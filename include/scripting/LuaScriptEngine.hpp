@@ -20,7 +20,9 @@ namespace dice::core {
 class GameObject;
 } // namespace dice::core
 
-namespace dice::core { class Model; }
+namespace dice::core {
+class Model;
+}
 
 #include "scripting/LuaScript.hpp"
 
@@ -46,7 +48,7 @@ public:
 
     bool fireEvent(const std::string& event_name, dice::core::GameObject* obj);
 
-    void fireKeyEvent(const std::string& keyName);
+    void fireKeyEvent(const std::string& key_name);
 
     void detachScript(const std::string& object_id);
 
@@ -64,15 +66,19 @@ public:
 
     void clearSceneState();
 
-    void registerModelAccess(dice::core::Model& model, std::function<std::string()> getCurrentPath);
+    void registerModelAccess(dice::core::Model& model,
+                             std::function<std::string()> get_current_path);
     void setSceneLoadCallback(std::function<void(const std::string&)> cb);
 
-    sol::state& getLua() { return lua_; }
+    sol::state& getLua() {
+        return lua_;
+    }
 
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
-        sol::protected_function fn = lua_[name];
-        if (!fn.valid())
+        const sol::protected_function fn = lua_[name];
+        if (!fn.valid()) {
             return;
+        }
         auto result = fn(std::forward<Args>(args)...);
         if (!result.valid()) {
             sol::error err = result;

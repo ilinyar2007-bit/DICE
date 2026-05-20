@@ -380,48 +380,39 @@ TEST(SceneValidatorTest, PropertiesIsNotObject) {
 
 TEST(SceneValidatorScripts, ValidScriptsArray) {
     dice::core::SceneValidator v;
-    nlohmann::json scene = {
+    const nlohmann::json scene = {
         {"scripts", nlohmann::json::array({"scripts/game.lua"})},
-        {"objects", nlohmann::json::array({
-            {{"id", "obj1"}, {"type", "GameObject"}}
-        })}
-    };
+        {"objects", nlohmann::json::array({{{"id", "obj1"}, {"type", "GameObject"}}})}};
     v.validate(scene, ".");
     EXPECT_FALSE(v.hasErrors());
 }
 
 TEST(SceneValidatorScripts, ScriptsNotArray) {
     dice::core::SceneValidator v;
-    nlohmann::json scene = {
+    const nlohmann::json scene = {
         {"scripts", "scripts/game.lua"},
-        {"objects", nlohmann::json::array({
-            {{"id", "obj1"}, {"type", "GameObject"}}
-        })}
-    };
+        {"objects", nlohmann::json::array({{{"id", "obj1"}, {"type", "GameObject"}}})}};
     v.validate(scene, ".");
     EXPECT_TRUE(v.hasErrors());
 }
 
 TEST(SceneValidatorTriggers, ValidTriggers) {
     dice::core::SceneValidator v;
-    nlohmann::json scene = {
-        {"objects", nlohmann::json::array({
-            {{"id","obj1"},{"type","GameObject"},
-             {"triggers", {{"on_click","roll_dice"}}}}
-        })}
-    };
+    const nlohmann::json scene = {
+        {"objects",
+         nlohmann::json::array({{{"id", "obj1"},
+                                 {"type", "GameObject"},
+                                 {"triggers", {{"on_click", "roll_dice"}}}}})}};
     v.validate(scene, ".");
     EXPECT_FALSE(v.hasErrors());
 }
 
 TEST(SceneValidatorTriggers, TriggersNotObject) {
     dice::core::SceneValidator v;
-    nlohmann::json scene = {
-        {"objects", nlohmann::json::array({
-            {{"id","obj1"},{"type","GameObject"},
-             {"triggers", "on_click"}}
-        })}
-    };
+    const nlohmann::json scene = {
+        {"objects",
+         nlohmann::json::array(
+             {{{"id", "obj1"}, {"type", "GameObject"}, {"triggers", "on_click"}}})}};
     v.validate(scene, ".");
     EXPECT_TRUE(v.hasErrors());
 }
@@ -451,13 +442,10 @@ TEST(SceneValidatorTest, MultipleErrorsCollected) {
 
 TEST(SceneValidatorTest, RecursiveObjectValidation) {
     SceneValidator validator;
-    nlohmann::json child = {{"id", 123}, {"type", "GameObject"}}; // Bad ID
-    nlohmann::json parent = {
-        {"id", "parent"},
-        {"type", "GameObject"},
-        {"children", nlohmann::json::array({child})}
-    };
-    nlohmann::json scene = {{"objects", nlohmann::json::array({parent})}};
+    const nlohmann::json child = {{"id", 123}, {"type", "GameObject"}}; // Bad ID
+    const nlohmann::json parent = {
+        {"id", "parent"}, {"type", "GameObject"}, {"children", nlohmann::json::array({child})}};
+    const nlohmann::json scene = {{"objects", nlohmann::json::array({parent})}};
 
     validator.validate(scene, test_path);
     EXPECT_TRUE(validator.hasErrors());

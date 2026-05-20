@@ -1,14 +1,14 @@
 #include "app/Application.hpp"
+
+#include <filesystem>
+
 #include "app/ConfigLoader.hpp"
 #include "scene/DefaultFactory.hpp"
 #include <spdlog/spdlog.h>
-#include <filesystem>
 
 namespace dice {
 
-Application::Application()
-    : view_(window_),
-      controller_(model_, view_, lua_, window_, textures_) {
+Application::Application() : view_(window_), controller_(model_, view_, lua_, window_, textures_) {
     model_.setFactory(dice::scene::makeDefaultFactory());
 }
 
@@ -27,7 +27,9 @@ void Application::run() {
 
     while (running_ && window_.isOpen()) {
         float dt = clock_.restart().asSeconds();
-        if (dt > 0.05f) dt = 0.05f; // Cap dt for stability
+        if (dt > 0.05F) {
+            dt = 0.05F; // Cap dt for stability
+        }
 
         handleEvents();
         update(dt);
@@ -41,11 +43,14 @@ bool Application::init() {
     config_ = ConfigLoader::load("game.json");
 
     // Window Setup
-    sf::Uint32 style = sf::Style::Titlebar | sf::Style::Close | (config_.resizable ? sf::Style::Resize : 0);
+    const sf::Uint32 style =
+        sf::Style::Titlebar | sf::Style::Close | (config_.resizable ? sf::Style::Resize : 0);
     window_.create(sf::VideoMode(config_.windowWidth, config_.windowHeight), config_.title, style);
     window_.setFramerateLimit(config_.framerateLimit);
 
-    if (!window_.isOpen()) return false;
+    if (!window_.isOpen()) {
+        return false;
+    }
 
     // Resources
     auto fallbackTex = std::make_shared<sf::Texture>();
@@ -66,7 +71,9 @@ bool Application::init() {
     vcfg.showFPS = config_.showFPS;
     vcfg.showObjectCount = config_.showObjectCount;
     vcfg.showControls = config_.showControls;
-    if (!config_.fonts.empty()) vcfg.fontAssetId = config_.fonts[0].id;
+    if (!config_.fonts.empty()) {
+        vcfg.fontAssetId = config_.fonts[0].id;
+    }
     view_.setConfig(vcfg);
 
     // Lua Setup
@@ -78,7 +85,7 @@ bool Application::init() {
         mainFont = fonts_.get(config_.fonts[0].id).get();
     }
     controller_.registerDefaultFunctions(mainFont);
-    
+
     if (!controller_.loadScene(config_.startScene)) {
         spdlog::error("Failed to load start scene: {}", config_.startScene);
         return false;
@@ -88,10 +95,16 @@ bool Application::init() {
 }
 
 void Application::handleEvents() {
-    sf::Event event;
+    sf::Event event{};
     while (window_.pollEvent(event)) {
-        if (event.type == sf::Event::Closed) running_ = false;
-        if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) running_ = false;
+        if (event.type == sf::Event::Closed) {
+            running_ = false;
+        }
+        if (event.type == sf::Event::KeyPressed &&
+            event.key.code ==
+                sf::Keyboard::Escape) { // NOLINT(cppcoreguidelines-pro-type-union-access)
+            running_ = false;
+        }
         controller_.handleEvent(event);
     }
 }
@@ -102,17 +115,19 @@ void Application::update(float dt) {
 
 void Application::render() {
     window_.clear(sf::Color(config_.clearR, config_.clearG, config_.clearB));
-    
+
     auto objects = controller_.collectObjects();
     view_.render(objects);
-    
+
     lua_.callGlobal("draw");
-    
+
     window_.display();
 }
 
 void Application::shutdown() {
-    if (window_.isOpen()) window_.close();
+    if (window_.isOpen()) {
+        window_.close();
+    }
 }
 
 } // namespace dice

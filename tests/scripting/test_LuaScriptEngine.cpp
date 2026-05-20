@@ -254,7 +254,7 @@ TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
     engine.fireEvent("on_click", obj.get());
 
     // Verify trigger was called
-    bool called = engine.getLua()["called"];
+    const bool called = engine.getLua()["called"];
     EXPECT_TRUE(called);
 }
 
@@ -301,6 +301,6 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
     // After clear, trigger should not fire (no crash, just returns false)
     auto obj = std::make_shared<dice::core::GameObject>("obj1", "Card");
     obj->setTriggerBinding("on_click", "my_trigger");
-    bool fired = engine.fireEvent("on_click", obj.get());
+    const bool fired = engine.fireEvent("on_click", obj.get());
     EXPECT_FALSE(fired);
 }

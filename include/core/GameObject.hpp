@@ -17,7 +17,12 @@ public:
 
     GameObject(std::string id, std::string name);
 
-    virtual ~GameObject() = default;
+    ~GameObject() override = default;
+
+    GameObject(const GameObject&) = delete;
+    GameObject& operator=(const GameObject&) = delete;
+    GameObject(GameObject&&) = delete;
+    GameObject& operator=(GameObject&&) = delete;
 
     // ========== Identification ==========
 
@@ -171,16 +176,17 @@ public:
     }
 
     // Get a custom property
-    template <typename T> T getProperty(const std::string& key, const T& defaultValue = T()) const {
+    template <typename T>
+    T getProperty(const std::string& key, const T& default_value = T()) const {
         auto it = properties_.find(key);
         if (it != properties_.end()) {
             try {
                 return it->second.get<T>();
             } catch (...) {
-                return defaultValue;
+                return default_value;
             }
         }
-        return defaultValue;
+        return default_value;
     }
 
     bool hasProperty(const std::string& key) const {
@@ -191,7 +197,7 @@ public:
 
     virtual void update(float delta_time);
 
-    virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+    void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
     // ========== Serialization ==========
 
@@ -211,8 +217,8 @@ public:
 
     // ========== Trigger bindings ==========
 
-    void setTriggerBinding(const std::string& event, const std::string& triggerName) {
-        triggerBindings_[event] = triggerName;
+    void setTriggerBinding(const std::string& event, const std::string& trigger_name) {
+        triggerBindings_[event] = trigger_name;
     }
 
     const std::unordered_map<std::string, std::string>& getTriggerBindings() const {
@@ -233,7 +239,7 @@ public:
         textureFile_ = path;
     }
 
-protected:
+private:
     std::string id_;
     std::string name_;
     std::string type_;

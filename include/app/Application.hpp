@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+
 #include <SFML/Graphics.hpp>
 
 #include "app/AppConfig.hpp"
@@ -18,6 +19,11 @@ class Application {
 public:
     Application();
     ~Application();
+
+    Application(const Application&) = delete;
+    Application& operator=(const Application&) = delete;
+    Application(Application&&) = delete;
+    Application& operator=(Application&&) = delete;
 
     void run();
 

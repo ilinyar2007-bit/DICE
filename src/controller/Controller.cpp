@@ -12,31 +12,55 @@
 namespace {
 std::string keyToString(sf::Keyboard::Key key) {
     switch (key) {
-        case sf::Keyboard::Space:  return "Space";
-        case sf::Keyboard::Enter:  return "Enter";
-        case sf::Keyboard::Tab:    return "Tab";
-        case sf::Keyboard::Up:     return "Up";
-        case sf::Keyboard::Down:   return "Down";
-        case sf::Keyboard::Left:   return "Left";
-        case sf::Keyboard::Right:  return "Right";
-        case sf::Keyboard::W:      return "W";
-        case sf::Keyboard::A:      return "A";
-        case sf::Keyboard::S:      return "S";
-        case sf::Keyboard::D:      return "D";
-        case sf::Keyboard::E:      return "E";
-        case sf::Keyboard::Q:      return "Q";
-        case sf::Keyboard::R:      return "R";
-        case sf::Keyboard::F:      return "F";
-        case sf::Keyboard::I:      return "I";
-        case sf::Keyboard::X:      return "X";
-        case sf::Keyboard::Num1:   return "1";
-        case sf::Keyboard::Num2:   return "2";
-        case sf::Keyboard::Num3:   return "3";
-        case sf::Keyboard::Num4:   return "4";
-        case sf::Keyboard::Num5:   return "5";
-        default:                   return "";
+        case sf::Keyboard::Space:
+            return "Space";
+        case sf::Keyboard::Enter:
+            return "Enter";
+        case sf::Keyboard::Tab:
+            return "Tab";
+        case sf::Keyboard::Up:
+            return "Up";
+        case sf::Keyboard::Down:
+            return "Down";
+        case sf::Keyboard::Left:
+            return "Left";
+        case sf::Keyboard::Right:
+            return "Right";
+        case sf::Keyboard::W:
+            return "W";
+        case sf::Keyboard::A:
+            return "A";
+        case sf::Keyboard::S:
+            return "S";
+        case sf::Keyboard::D:
+            return "D";
+        case sf::Keyboard::E:
+            return "E";
+        case sf::Keyboard::Q:
+            return "Q";
+        case sf::Keyboard::R:
+            return "R";
+        case sf::Keyboard::F:
+            return "F";
+        case sf::Keyboard::I:
+            return "I";
+        case sf::Keyboard::X:
+            return "X";
+        case sf::Keyboard::Num1:
+            return "1";
+        case sf::Keyboard::Num2:
+            return "2";
+        case sf::Keyboard::Num3:
+            return "3";
+        case sf::Keyboard::Num4:
+            return "4";
+        case sf::Keyboard::Num5:
+            return "5";
+        default:
+            return "";
     }
 }
+
 } // namespace
 
 namespace dice::controller {
@@ -47,7 +71,8 @@ Controller::Controller(dice::core::Model& model,
                        sf::RenderWindow& window,
                        dice::core::ResourceManager<sf::Texture>& textures)
     : model_(model), view_(view), lua_(lua), window_(window), textures_(textures),
-      fieldBounds_(0.F, 0.F,
+      fieldBounds_(0.F,
+                   0.F,
                    static_cast<float>(window.getSize().x),
                    static_cast<float>(window.getSize().y)) {}
 
@@ -192,9 +217,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
                               obj->setTexture(textures_.get(path).get());
                           });
 
-    lua_.setSceneLoadCallback([this](const std::string& path) {
-        pendingScenePath_ = path;
-    });
+    lua_.setSceneLoadCallback([this](const std::string& path) { pendingScenePath_ = path; });
     lua_.registerModelAccess(model_, [this]() { return currentScenePath_; });
 }
 
@@ -215,8 +238,9 @@ void Controller::handleEvent(const sf::Event& event) {
 
     if (event.type == sf::Event::KeyPressed) {
         const std::string keyName = keyToString(event.key.code); // NOLINT
-        if (!keyName.empty())
+        if (!keyName.empty()) {
             lua_.fireKeyEvent(keyName);
+        }
     }
 
     view_.handleEvent(event);
@@ -251,8 +275,12 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
         spdlog::info("Controller: click at ({},{}) — no object picked", ev.x, ev.y);
     } else {
         spdlog::info("Controller: click at ({},{}) — picked '{}' draggable={} visible={} active={}",
-            ev.x, ev.y, picked->getId(),
-            picked->isDraggable(), picked->isVisible(), picked->isActive());
+                     ev.x,
+                     ev.y,
+                     picked->getId(),
+                     picked->isDraggable(),
+                     picked->isVisible(),
+                     picked->isActive());
     }
 
     if (picked && picked->isDraggable()) {
@@ -304,7 +332,8 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
 void Controller::onMouseReleased(const sf::Event::MouseButtonEvent& /*ev*/) {
     if (draggedObj_) {
         spdlog::info("Controller: mouse released on '{}' wasDragging={}",
-            draggedObj_->getId(), wasDragging_);
+                     draggedObj_->getId(),
+                     wasDragging_);
         if (!wasDragging_) {
             spdlog::info("Controller: click (on release) '{}'", draggedObj_->getId());
             lua_.fireEvent(dice::scripting::kEventOnClick, draggedObj_.get());

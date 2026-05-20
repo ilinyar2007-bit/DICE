@@ -20,7 +20,7 @@ LuaScriptEngine::LuaScriptEngine() {
 void LuaScriptEngine::initLibraries() {
     lua_.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table);
 
-    lua_.set_exception_handler([](lua_State* L,
+    lua_.set_exception_handler([](lua_State* l,
                                   sol::optional<const std::exception&> maybe_exception,
                                   sol::string_view description) {
         if (maybe_exception) {
@@ -28,7 +28,7 @@ void LuaScriptEngine::initLibraries() {
         } else {
             spdlog::error("Lua Exception: {}", description);
         }
-        return sol::stack::push(L, description);
+        return sol::stack::push(l, description);
     });
 }
 
@@ -113,9 +113,7 @@ void LuaScriptEngine::registerGameObjectType() {
             return o.hasTag(tag);
         },
         "getTags",
-        [](const dice::core::GameObject& o) -> std::vector<std::string> {
-            return o.getTags();
-        });
+        [](const dice::core::GameObject& o) -> std::vector<std::string> { return o.getTags(); });
 }
 
 void LuaScriptEngine::registerEngineTable() {
@@ -125,17 +123,15 @@ void LuaScriptEngine::registerEngineTable() {
         [this](const std::string& obj_id, const std::string& event, sol::protected_function fn) {
             inlineCallbacks_[obj_id][event] = std::move(fn);
         });
-    engine.set_function(
-        "trigger",
-        [this](const std::string& name, sol::protected_function fn) {
-            triggerCatalog_[name] = std::move(fn);
-        });
-    engine.set_function("onKey",
-        [this](const std::string& keyName, sol::protected_function fn) {
-            if (keyHandlers_.count(keyName) > 0)
-                spdlog::warn("LuaScriptEngine: onKey '{}' handler overwritten", keyName);
-            keyHandlers_[keyName] = std::move(fn);
-        });
+    engine.set_function("trigger", [this](const std::string& name, sol::protected_function fn) {
+        triggerCatalog_[name] = std::move(fn);
+    });
+    engine.set_function("onKey", [this](const std::string& key_name, sol::protected_function fn) {
+        if (keyHandlers_.contains(key_name)) {
+            spdlog::warn("LuaScriptEngine: onKey '{}' handler overwritten", key_name);
+        }
+        keyHandlers_[key_name] = std::move(fn);
+    });
 }
 
 void LuaScriptEngine::registerStandardCallbacks() {
@@ -242,7 +238,9 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
             if (!result.valid()) {
                 const sol::error err = result;
                 spdlog::error("LuaScriptEngine: trigger '{}' on '{}': {}",
-                              bit->second, obj->getId(), err.what());
+                              bit->second,
+                              obj->getId(),
+                              err.what());
             }
             fired = true;
         }
@@ -290,18 +288,20 @@ void LuaScriptEngine::clearSceneState() {
     keyHandlers_.clear();
 }
 
-void LuaScriptEngine::fireKeyEvent(const std::string& keyName) {
-    auto it = keyHandlers_.find(keyName);
-    if (it == keyHandlers_.end()) return;
+void LuaScriptEngine::fireKeyEvent(const std::string& key_name) {
+    auto it = keyHandlers_.find(key_name);
+    if (it == keyHandlers_.end()) {
+        return;
+    }
     auto result = it->second();
     if (!result.valid()) {
         const sol::error err = result;
-        spdlog::error("LuaScriptEngine: onKey '{}': {}", keyName, err.what());
+        spdlog::error("LuaScriptEngine: onKey '{}': {}", key_name, err.what());
     }
 }
 
 void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
-                                           std::function<std::string()> getCurrentPath) {
+                                          std::function<std::string()> get_current_path) {
     sol::table engine = lua_["engine"];
     if (!engine.valid()) {
         spdlog::error("LuaScriptEngine::registerModelAccess: 'engine' table not found");
@@ -309,20 +309,20 @@ void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
     }
 
     engine.set_function("getObject",
-        [&model](const std::string& id) {
-            return model.getObject(id);
-        });
+                        [&model](const std::string& id) { return model.getObject(id); });
 
     engine.set_function("loadScene", [this](const std::string& path) {
-        if (sceneLoadCallback_)
+        if (sceneLoadCallback_) {
             sceneLoadCallback_(path);
+        }
     });
 
-    engine.set_function("reloadScene", [this, getCurrentPath = std::move(getCurrentPath)]() {
+    engine.set_function("reloadScene", [this, get_current_path = std::move(get_current_path)]() {
         if (sceneLoadCallback_) {
-            const auto path = getCurrentPath();
-            if (!path.empty())
+            const auto path = get_current_path();
+            if (!path.empty()) {
                 sceneLoadCallback_(path);
+            }
         }
     });
 }
