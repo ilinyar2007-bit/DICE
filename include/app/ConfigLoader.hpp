@@ -2,6 +2,7 @@
 #define DICE_APP_CONFIGLOADER_HPP
 
 #include <filesystem>
+
 #include "app/AppConfig.hpp"
 
 namespace dice {

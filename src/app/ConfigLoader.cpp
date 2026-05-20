@@ -1,5 +1,7 @@
 #include "app/ConfigLoader.hpp"
+
 #include <fstream>
+
 #include <spdlog/spdlog.h>
 
 namespace dice {

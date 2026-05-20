@@ -254,9 +254,7 @@ TEST(ModelCleanTest, UnregisterCallbackCalledOnRemove) {
     model.addRootObject(root);
 
     std::vector<std::string> removedIds;
-    model.setUnregisterCallback([&](const std::string& id) {
-        removedIds.push_back(id);
-    });
+    model.setUnregisterCallback([&](const std::string& id) { removedIds.push_back(id); });
 
     model.removeObject("root");
 
