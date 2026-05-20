@@ -55,7 +55,7 @@ private:
     dice::core::ResourceManager<sf::Texture>& textures_;
 
     std::string currentScenePath_;
-    std::string pendingScenePath_; // set by engine.loadScene() Lua call (Task 7)
+    std::string pendingScenePath_;
 
     std::shared_ptr<dice::core::GameObject> draggedObj_;
     sf::Vector2f dragOffset_;

@@ -226,7 +226,9 @@ void Controller::update(float dt) {
     if (!pendingScenePath_.empty()) {
         std::string path = pendingScenePath_;
         pendingScenePath_.clear();
-        loadScene(path);
+        if (!loadScene(path)) {
+            spdlog::error("Controller: failed to load pending scene '{}'", path);
+        }
         return;
     }
     lua_.callGlobal("update", dt);
@@ -284,7 +286,6 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
         wasDragging_ = true;
     }
 
-    // Hover detection (работает независимо от drag)
     const auto objs = collectObjects();
     auto picked = view_.pickObject(wp, objs);
 

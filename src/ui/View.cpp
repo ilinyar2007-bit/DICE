@@ -7,10 +7,6 @@ namespace dice::view {
 
 View::View(sf::RenderWindow& window) : window_(window) {
     spdlog::info("View initialized (basic rendering)");
-
-    if (!window_.isOpen()) {
-        spdlog::error("View constructed with closed window!");
-    }
 }
 
 // ========== Basic methods ==========
