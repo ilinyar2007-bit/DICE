@@ -6,8 +6,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "app/AppConfig.hpp"
 #include "controller/Controller.hpp"
-#include "core/ActionManager.hpp"
 #include "core/Model.hpp"
 #include "core/ResourceManager.hpp"
 #include "scripting/LuaScriptEngine.hpp"
@@ -29,12 +29,13 @@ private:
     void initLua();
     void initView();
     void initController();
-    void loadScene();
 
     void handleEvents();
     void update(float dt);
     void render();
     void shutdown();
+
+    AppConfig config_;
 
     sf::RenderWindow window_;
 
@@ -42,7 +43,6 @@ private:
     core::ResourceManager<sf::Font> fonts_;
 
     core::Model model_;
-    core::ActionManager actions_;
 
     view::View view_;
     scripting::LuaScriptEngine lua_;

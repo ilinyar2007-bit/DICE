@@ -1,14 +1,12 @@
 #include "app/Application.hpp"
 
 #include <filesystem>
-#include <fstream>
 
 namespace fs = std::filesystem;
 
 namespace dice {
 
-Application::Application() : actions_(), view_(window_), controller_(model_, view_, lua_, window_) {
-    // controller_.setActionManager(&actions_);
+Application::Application() : view_(window_), controller_(model_, view_, lua_, window_) {
     initialized_ = false;
 }
 
@@ -23,6 +21,8 @@ void Application::run() {
     }
     initialized_ = true;
 
+    config_ = AppConfig::loadFromFile("game.json");
+
     if (!initWindow()) {
         spdlog::error("Failed to initialize window");
         return;
@@ -32,7 +32,6 @@ void Application::run() {
     initLua();
     initView();
     initController();
-    loadScene();
 
     spdlog::info("=== DICE Application Started ===");
 
@@ -51,15 +50,17 @@ void Application::run() {
 
 bool Application::initWindow() {
     try {
-        window_.create(sf::VideoMode(1280, 720), "DICE");
+        window_.create(
+            sf::VideoMode(config_.windowWidth, config_.windowHeight),
+            config_.title);
 
         if (!window_.isOpen()) {
             spdlog::error("Window failed to open");
             return false;
         }
 
-        window_.setFramerateLimit(60);
-        spdlog::info("Window created: 1280x720");
+        window_.setFramerateLimit(config_.framerateLimit);
+        spdlog::info("Window created: {}x{}", config_.windowWidth, config_.windowHeight);
         return true;
 
     } catch (const std::exception& e) {
@@ -75,21 +76,11 @@ void Application::initResources() {
     }
     textures_.setFallback(fallback);
 
-    std::vector<std::string> fontPaths = {"assets/fonts/OpenSans-Regular.ttf"};
-
-    bool fontLoaded = false;
-    for (const auto& path : fontPaths) {
-        if (fs::exists(path)) {
-            if (fonts_.load("default_font", path)) {
-                spdlog::info("Font loaded: {}", path);
-                fontLoaded = true;
-                break;
-            }
+    for (const auto& entry : config_.fonts) {
+        if (fs::exists(entry.path)) {
+            fonts_.load(entry.id, entry.path);
+            spdlog::info("Font loaded: {}", entry.path);
         }
-    }
-
-    if (!fontLoaded) {
-        spdlog::warn("No font found, text rendering will be disabled");
     }
 }
 
@@ -109,50 +100,22 @@ void Application::initLua() {
 void Application::initView() {
     view_.setFontManager(&fonts_);
 
-    view::ViewConfig config;
-    config.showFPS = true;
-    config.showObjectCount = true;
-    config.showControls = true;
-    config.fontAssetId = "default_font";
-    view_.setConfig(config);
+    view::ViewConfig vcfg;
+    vcfg.showFPS         = config_.showFPS;
+    vcfg.showObjectCount = config_.showObjectCount;
+    vcfg.showControls    = config_.showControls;
+    vcfg.fontAssetId     = config_.fonts.empty() ? "default_font" : config_.fonts[0].id;
+    view_.setConfig(vcfg);
 
     spdlog::info("View initialized");
 }
 
 void Application::initController() {
-    controller_.loadTextures(textures_);
-
-    auto font = fonts_.get("default_font");
+    auto fontId = config_.fonts.empty() ? "default_font" : config_.fonts[0].id;
+    auto font = fonts_.get(fontId);
     controller_.registerDefaultFunctions(textures_, font.get());
-
+    controller_.loadScene(config_.startScene);
     spdlog::info("Controller initialized");
-}
-
-void Application::loadScene() {
-    std::string scenePath = "assets/scenes/main.json";
-
-    if (!fs::exists(scenePath)) {
-        spdlog::warn("Scene not found: {}", scenePath);
-        return;
-    }
-
-    std::ifstream file(scenePath);
-    if (!file.is_open()) {
-        spdlog::error("Cannot open scene: {}", scenePath);
-        return;
-    }
-
-    try {
-        nlohmann::json json;
-        file >> json;
-        model_.fromJson(json);
-        actions_.saveSnapshot(model_);
-        spdlog::info("Scene loaded: {}", scenePath);
-    } catch (const nlohmann::json::parse_error& e) {
-        spdlog::error("Failed to parse scene JSON: {}", e.what());
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to load scene: {}", e.what());
-    }
 }
 
 void Application::handleEvents() {
@@ -164,26 +127,13 @@ void Application::handleEvents() {
                 window_.close();
                 return;
             }
-
-            if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Escape) {
-                    running_ = false;
-                    window_.close();
-                    return;
-                }
-
-                if (event.key.control) {
-                    if (event.key.code == sf::Keyboard::Z && actions_.canUndo()) {
-                        actions_.undo(model_);
-                    }
-                    if (event.key.code == sf::Keyboard::Y && actions_.canRedo()) {
-                        actions_.redo(model_);
-                    }
-                }
+            if (event.type == sf::Event::KeyPressed &&
+                event.key.code == sf::Keyboard::Escape) {
+                running_ = false;
+                window_.close();
+                return;
             }
-
             controller_.handleEvent(event);
-
         } catch (const std::exception& e) {
             spdlog::error("Error handling event: {}", e.what());
         }
@@ -200,13 +150,10 @@ void Application::update(float dt) {
 
 void Application::render() {
     try {
-        window_.clear(sf::Color(30, 30, 40));
-
+        window_.clear(sf::Color(config_.clearR, config_.clearG, config_.clearB));
         auto objects = controller_.collectObjects();
         view_.render(objects);
-
         window_.display();
-
     } catch (const std::exception& e) {
         spdlog::error("Error in render: {}", e.what());
         window_.display();
