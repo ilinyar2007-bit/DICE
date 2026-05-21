@@ -74,7 +74,7 @@ bool Application::init() {
 
     // View Config
     view_.setFontManager(&fonts_);
-    view::ViewConfig vcfg{
+    const view::ViewConfig vcfg{
         .showFPS = config_.showFPS,
         .showObjectCount = config_.showObjectCount,
         .showControls = config_.showControls,
