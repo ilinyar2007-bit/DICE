@@ -137,8 +137,7 @@ void LuaScriptEngine::registerEngineTable() {
 void LuaScriptEngine::registerStandardCallbacks() {
     lua_.set_function("cpp_log", [this](const std::string& message) {
         spdlog::info("[Lua] {}", message);
-        auto it = callbacks_.find("cpp_log");
-        if (it != callbacks_.end()) {
+        if (auto it = callbacks_.find("cpp_log"); it != callbacks_.end()) {
             it->second(message);
         }
     });
@@ -147,8 +146,7 @@ void LuaScriptEngine::registerStandardCallbacks() {
 void LuaScriptEngine::registerCallback(const std::string& name, UiCallback callback) {
     callbacks_[name] = std::move(callback);
     lua_.set_function(name, [this, name](const std::string& msg) {
-        auto it = callbacks_.find(name);
-        if (it != callbacks_.end()) {
+        if (auto it = callbacks_.find(name); it != callbacks_.end()) {
             it->second(msg);
         }
     });

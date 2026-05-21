@@ -40,7 +40,7 @@ void Application::run() {
 }
 
 bool Application::init() {
-    config_ = ConfigLoader::load("game.json");
+    config_ = loadConfig("game.json");
 
     // Window Setup
     const sf::Uint32 style =
@@ -49,6 +49,7 @@ bool Application::init() {
     window_.setFramerateLimit(config_.framerateLimit);
 
     if (!window_.isOpen()) {
+        spdlog::error("Failed to create window");
         return false;
     }
 
@@ -62,18 +63,23 @@ bool Application::init() {
     for (const auto& f : config_.fonts) {
         if (std::filesystem::exists(f.path)) {
             fonts_.load(f.id, f.path);
+        } else {
+            spdlog::warn("Font file not found: {}", f.path);
         }
+    }
+
+    if (fonts_.isEmpty()) {
+        spdlog::warn("No fonts loaded. UI text may not be rendered correctly.");
     }
 
     // View Config
     view_.setFontManager(&fonts_);
-    view::ViewConfig vcfg;
-    vcfg.showFPS = config_.showFPS;
-    vcfg.showObjectCount = config_.showObjectCount;
-    vcfg.showControls = config_.showControls;
-    if (!config_.fonts.empty()) {
-        vcfg.fontAssetId = config_.fonts[0].id;
-    }
+    view::ViewConfig vcfg{
+        .showFPS = config_.showFPS,
+        .showObjectCount = config_.showObjectCount,
+        .showControls = config_.showControls,
+        .fontAssetId = config_.fonts.empty() ? std::string{} : config_.fonts[0].id,
+    };
     view_.setConfig(vcfg);
 
     // Lua Setup

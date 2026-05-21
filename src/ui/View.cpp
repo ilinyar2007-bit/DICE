@@ -96,8 +96,9 @@ void View::drawObjects(const std::vector<std::shared_ptr<core::GameObject>>& obj
 }
 
 void View::drawObject(const std::shared_ptr<core::GameObject>& obj) {
+    // Hierarchical rendering: obj->draw will recursively draw its children
+    // using the parent's transformation state.
     window_.draw(*obj);
-    // TODO
 }
 
 // ========== Interface rendering ==========

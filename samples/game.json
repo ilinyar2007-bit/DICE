@@ -1,0 +1,21 @@
+{
+    "windowWidth": 1280,
+    "windowHeight": 720,
+    "title": "DICE",
+    "framerateLimit": 60,
+    "clearR": 30,
+    "clearG": 30,
+    "clearB": 40,
+    "startScene": "scenes/nardi.json",
+    "globalScript": "",
+    "showFPS": true,
+    "showObjectCount": true,
+    "showControls": true,
+    "resizable": false,
+    "fonts": [
+        {
+            "id": "default_font",
+            "path": "assets/fonts/OpenSans-Regular.ttf"
+        }
+    ]
+}

@@ -1,4 +1,3 @@
-// include/controller/Controller.hpp
 #ifndef DICE_CONTROLLER_CONTROLLER_HPP
 #define DICE_CONTROLLER_CONTROLLER_HPP
 

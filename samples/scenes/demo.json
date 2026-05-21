@@ -1,5 +1,5 @@
 {
-  "scripts": ["scripts/game.lua"],
+  "scripts": ["scripts/dice_demo.lua"],
   "objects": [
     {
       "type": "GameObject",

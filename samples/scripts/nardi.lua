@@ -50,7 +50,9 @@ end
 
 local function checkerPos(pt, idx, total)
     local gap
-    if total <= 6 then
+    if total <= 1 then
+        gap = 0
+    elseif total <= 6 then
         gap = CHECKER_R * 2 + 2
     else
         gap = (MAX_STACK_H - CHECKER_R * 2) / (total - 1)

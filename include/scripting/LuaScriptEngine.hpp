@@ -1,6 +1,7 @@
 #ifndef DICE_SCRIPTING_LUA_SCRIPT_ENGINE_HPP
 #define DICE_SCRIPTING_LUA_SCRIPT_ENGINE_HPP
 
+#include <concepts>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -56,7 +57,8 @@ public:
 
     void registerCallback(const std::string& name, UiCallback callback);
 
-    template <typename Func> void registerFunction(const std::string& name, Func&& func) {
+    template <typename Func>
+    void registerFunction(const std::string& name, Func&& func) {
         lua_.set_function(name, std::forward<Func>(func));
     }
 
@@ -70,8 +72,16 @@ public:
                              std::function<std::string()> get_current_path);
     void setSceneLoadCallback(std::function<void(const std::string&)> cb);
 
-    sol::state& getLua() {
-        return lua_;
+    template <typename T> T getGlobalVariable(const std::string& name, const T& default_value = T()) {
+        auto val = lua_[name];
+        if (val.valid()) {
+            return val.get<T>();
+        }
+        return default_value;
+    }
+
+    bool hasGlobalVariable(const std::string& name) {
+        return lua_[name].valid();
     }
 
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {

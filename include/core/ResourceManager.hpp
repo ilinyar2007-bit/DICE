@@ -86,6 +86,10 @@ public:
         resources_.clear();
     };
 
+    bool isEmpty() const {
+        return resources_.empty();
+    }
+
     // ========== Set fallback resource ==========
     void setFallback(std::shared_ptr<Resource> fallback) {
         fallback_ = std::move(fallback);

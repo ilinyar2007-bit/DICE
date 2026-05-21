@@ -6,7 +6,7 @@
 
 namespace dice {
 
-AppConfig ConfigLoader::load(const std::filesystem::path& path) {
+AppConfig loadConfig(const std::filesystem::path& path) {
     AppConfig cfg;
     if (!std::filesystem::exists(path)) {
         spdlog::warn("Config file not found: {}, using defaults", path.string());
@@ -15,6 +15,7 @@ AppConfig ConfigLoader::load(const std::filesystem::path& path) {
 
     try {
         std::ifstream file(path);
+        file.exceptions(std::ios::failbit | std::ios::badbit);
         nlohmann::json j;
         file >> j;
         cfg = j.get<AppConfig>();

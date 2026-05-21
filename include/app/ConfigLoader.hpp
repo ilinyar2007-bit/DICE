@@ -7,10 +7,7 @@
 
 namespace dice {
 
-class ConfigLoader {
-public:
-    static AppConfig load(const std::filesystem::path& path);
-};
+AppConfig loadConfig(const std::filesystem::path& path);
 
 } // namespace dice
 

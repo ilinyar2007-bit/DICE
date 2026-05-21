@@ -254,7 +254,7 @@ TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
     engine.fireEvent("on_click", obj.get());
 
     // Verify trigger was called
-    const bool called = engine.getLua()["called"];
+    const bool called = engine.getGlobalVariable<bool>("called");
     EXPECT_TRUE(called);
 }
 

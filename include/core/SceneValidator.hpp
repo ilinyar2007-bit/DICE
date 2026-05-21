@@ -9,7 +9,7 @@
 
 namespace dice::core {
 
-enum class MessageCode {
+enum class MessageCode : std::uint8_t {
 
     E_SCENE_ROOT_IS_NOT_AN_OBJECT,
     E_MISSING_OBJECTS_ARRAY,
