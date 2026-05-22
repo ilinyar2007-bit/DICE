@@ -124,6 +124,7 @@ private:
     void registerStandardCallbacks();
     void registerEngineTable();
     sol::environment makeEnvironment();
+    sol::table loadOrGetCachedModule(const std::string& filepath);
 };
 
 } // namespace dice::scripting

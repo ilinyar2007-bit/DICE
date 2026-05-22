@@ -34,3 +34,32 @@ TEST(BehaviorPresets, ClearSceneStateDoesNotClearPresets) {
     engine.clearSceneState();
     EXPECT_EQ(engine.getGlobalPresetCatalog().count("P1"), 1u);
 }
+
+TEST(BehaviorPresets, FileColonFunctionDispatchCallsModule) {
+    LuaScriptEngine engine;
+
+    auto obj = std::make_shared<GameObject>("obj1", "original");
+    obj->setTriggerBinding("on_click", "tests/fixtures/click_preset.lua:on_click");
+
+    engine.fireEvent(kEventOnClick, obj.get());
+
+    EXPECT_EQ(obj->getName(), "preset_fired");
+}
+
+TEST(BehaviorPresets, FileColonFunctionMissingFilDoesNotCrash) {
+    LuaScriptEngine engine;
+    auto obj = std::make_shared<GameObject>("obj1", "test");
+    obj->setTriggerBinding("on_click", "nonexistent/file.lua:fn");
+
+    const bool fired = engine.fireEvent(kEventOnClick, obj.get());
+    EXPECT_FALSE(fired);
+}
+
+TEST(BehaviorPresets, FileColonFunctionMissingFuncDoesNotCrash) {
+    LuaScriptEngine engine;
+    auto obj = std::make_shared<GameObject>("obj1", "test");
+    obj->setTriggerBinding("on_click", "tests/fixtures/click_preset.lua:no_such_func");
+
+    const bool fired = engine.fireEvent(kEventOnClick, obj.get());
+    EXPECT_FALSE(fired);
+}

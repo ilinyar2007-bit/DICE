@@ -229,16 +229,38 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
     // Check trigger catalog using object's trigger bindings
     const auto& bindings = obj->getTriggerBindings();
     if (auto bit = bindings.find(event_name); bit != bindings.end()) {
-        if (auto tit = triggerCatalog_.find(bit->second); tit != triggerCatalog_.end()) {
-            auto result = tit->second(obj);
-            if (!result.valid()) {
-                const sol::error err = result;
-                spdlog::error("LuaScriptEngine: trigger '{}' on '{}': {}",
-                              bit->second,
-                              obj->getId(),
-                              err.what());
+        const std::string& trigger_ref = bit->second;
+        const auto colon_pos = trigger_ref.rfind(':');
+        if (colon_pos != std::string::npos) {
+            const std::string filepath = trigger_ref.substr(0, colon_pos);
+            const std::string funcname = trigger_ref.substr(colon_pos + 1);
+            sol::table module = loadOrGetCachedModule(filepath);
+            if (module.valid()) {
+                sol::protected_function fn = module[funcname];
+                if (fn.valid()) {
+                    auto result = fn(obj);
+                    if (!result.valid()) {
+                        const sol::error err = result;
+                        spdlog::error("LuaScriptEngine: module '{}:{}' on '{}': {}",
+                                      filepath, funcname, obj->getId(), err.what());
+                    } else {
+                        fired = true;
+                    }
+                } else {
+                    spdlog::warn("LuaScriptEngine: function '{}' not found in module '{}'",
+                                 funcname, filepath);
+                }
             }
-            fired = true;
+        } else {
+            if (auto tit = triggerCatalog_.find(trigger_ref); tit != triggerCatalog_.end()) {
+                auto result = tit->second(obj);
+                if (!result.valid()) {
+                    const sol::error err = result;
+                    spdlog::error("LuaScriptEngine: trigger '{}' on '{}': {}",
+                                  trigger_ref, obj->getId(), err.what());
+                }
+                fired = true;
+            }
         }
     }
 
@@ -358,6 +380,26 @@ void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
 
 void LuaScriptEngine::setSceneLoadCallback(std::function<void(const std::string&)> cb) {
     sceneLoadCallback_ = std::move(cb);
+}
+
+sol::table LuaScriptEngine::loadOrGetCachedModule(const std::string& filepath) {
+    if (auto it = moduleCache_.find(filepath); it != moduleCache_.end()) {
+        return it->second;
+    }
+    auto result = lua_.script_file(filepath, sol::script_pass_on_error);
+    if (!result.valid()) {
+        const sol::error err = result;
+        spdlog::error("LuaScriptEngine: failed to load module '{}': {}", filepath, err.what());
+        return sol::table{};
+    }
+    sol::object obj = result;
+    if (!obj.is<sol::table>()) {
+        spdlog::error("LuaScriptEngine: module '{}' must return a table", filepath);
+        return sol::table{};
+    }
+    sol::table t = obj.as<sol::table>();
+    moduleCache_[filepath] = t;
+    return t;
 }
 
 } // namespace dice::scripting
