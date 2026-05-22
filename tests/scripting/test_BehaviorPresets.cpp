@@ -156,3 +156,35 @@ TEST(BehaviorPresets, UnknownPresetIsSkipped) {
 
     EXPECT_TRUE(obj->getTriggerBindings().empty());
 }
+
+TEST(BehaviorPresets, IntegrationPresetTriggerFiresViaModule) {
+    LuaScriptEngine engine;
+
+    // 1. Load preset catalog
+    nlohmann::json catalog = nlohmann::json::parse(R"({
+        "presets": {
+            "Clickable": {
+                "on_click": "tests/fixtures/click_preset.lua:on_click"
+            }
+        }
+    })");
+    engine.loadPresetsFromJson(catalog);
+
+    // 2. Create object as if loaded from scene JSON
+    auto obj = std::make_shared<GameObject>("obj1", "original");
+    nlohmann::json objJson = nlohmann::json::parse(R"({
+        "id": "obj1",
+        "name": "original",
+        "presets": ["Clickable"]
+    })");
+    obj->fromJson(objJson);
+
+    // 3. Simulate Controller merge
+    applyPresets(*obj, engine.getGlobalPresetCatalog());
+
+    // 4. Fire event
+    engine.fireEvent(kEventOnClick, obj.get());
+
+    // 5. Verify preset function was called
+    EXPECT_EQ(obj->getName(), "preset_fired");
+}
