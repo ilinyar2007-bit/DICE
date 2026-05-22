@@ -36,6 +36,34 @@ std::string keyToString(sf::Keyboard::Key key) {
     return it != kKeyNames.end() ? std::string{it->second} : std::string{};
 }
 
+void mergePresetsIntoObject(
+    dice::core::GameObject& obj,
+    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog)
+{
+    if (obj.getPresets().empty()) {
+        return;
+    }
+    std::unordered_map<std::string, std::string> finalBindings;
+    for (const auto& preset_name : obj.getPresets()) {
+        auto it = catalog.find(preset_name);
+        if (it == catalog.end()) {
+            spdlog::warn("Controller: unknown preset '{}' on object '{}'",
+                         preset_name, obj.getId());
+            continue;
+        }
+        for (const auto& [event, ref] : it->second) {
+            finalBindings[event] = ref;
+        }
+    }
+    for (const auto& [event, ref] : obj.getTriggerBindings()) {
+        finalBindings[event] = ref;
+    }
+    obj.clearTriggerBindings();
+    for (const auto& [event, ref] : finalBindings) {
+        obj.setTriggerBinding(event, ref);
+    }
+}
+
 } // namespace
 
 namespace dice::controller {
@@ -82,6 +110,14 @@ bool Controller::loadScene(const std::filesystem::path& path) {
 
     model_.clear();
     model_.fromJson(sceneJson);
+
+    // Merge behavior presets into objects
+    {
+        const auto& catalog = lua_.getGlobalPresetCatalog();
+        model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
+            mergePresetsIntoObject(*obj, catalog);
+        });
+    }
 
     loadedTextureIds_.clear();
     loadTexturesForModel();

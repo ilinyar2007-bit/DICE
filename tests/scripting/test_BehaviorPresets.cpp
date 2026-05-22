@@ -8,6 +8,34 @@ using dice::core::GameObject;
 using dice::scripting::LuaScriptEngine;
 using dice::scripting::kEventOnClick;
 
+namespace {
+void applyPresets(
+    dice::core::GameObject& obj,
+    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog)
+{
+    if (obj.getPresets().empty()) {
+        return;
+    }
+    std::unordered_map<std::string, std::string> finalBindings;
+    for (const auto& preset_name : obj.getPresets()) {
+        auto it = catalog.find(preset_name);
+        if (it == catalog.end()) {
+            continue;
+        }
+        for (const auto& [event, ref] : it->second) {
+            finalBindings[event] = ref;
+        }
+    }
+    for (const auto& [event, ref] : obj.getTriggerBindings()) {
+        finalBindings[event] = ref;
+    }
+    obj.clearTriggerBindings();
+    for (const auto& [event, ref] : finalBindings) {
+        obj.setTriggerBinding(event, ref);
+    }
+}
+} // namespace
+
 TEST(BehaviorPresets, LoadPresetsFromJsonPopulatesCatalog) {
     LuaScriptEngine engine;
     nlohmann::json j = nlohmann::json::parse(R"({
@@ -79,4 +107,52 @@ TEST(BehaviorPresets, GameObjectEmptyPresetsWhenFieldMissing) {
     nlohmann::json j = nlohmann::json::parse(R"({"id":"x"})");
     obj.fromJson(j);
     EXPECT_TRUE(obj.getPresets().empty());
+}
+
+TEST(BehaviorPresets, MergeTwoPresetsLatterWins) {
+    LuaScriptEngine engine;
+    nlohmann::json j = nlohmann::json::parse(R"({
+        "presets": {
+            "P1": { "on_click": "f1.lua:fn" },
+            "P2": { "on_click": "f2.lua:fn" }
+        }
+    })");
+    engine.loadPresetsFromJson(j);
+
+    auto obj = std::make_shared<GameObject>("obj1", "test");
+    nlohmann::json objJson = nlohmann::json::parse(R"({"presets":["P1","P2"]})");
+    obj->fromJson(objJson);
+
+    applyPresets(*obj, engine.getGlobalPresetCatalog());
+
+    EXPECT_EQ(obj->getTriggerBindings().at("on_click"), "f2.lua:fn");
+}
+
+TEST(BehaviorPresets, IndividualTriggerOverridesPreset) {
+    LuaScriptEngine engine;
+    nlohmann::json j = nlohmann::json::parse(R"({"presets":{"P1":{"on_click":"preset.lua:fn"}}})");
+    engine.loadPresetsFromJson(j);
+
+    auto obj = std::make_shared<GameObject>("obj1", "test");
+    nlohmann::json objJson = nlohmann::json::parse(R"({
+        "presets": ["P1"],
+        "triggers": {"on_click": "my_individual_trigger"}
+    })");
+    obj->fromJson(objJson);
+
+    applyPresets(*obj, engine.getGlobalPresetCatalog());
+
+    EXPECT_EQ(obj->getTriggerBindings().at("on_click"), "my_individual_trigger");
+}
+
+TEST(BehaviorPresets, UnknownPresetIsSkipped) {
+    LuaScriptEngine engine;
+
+    auto obj = std::make_shared<GameObject>("obj1", "test");
+    nlohmann::json objJson = nlohmann::json::parse(R"({"presets":["NonExistent"]})");
+    obj->fromJson(objJson);
+
+    applyPresets(*obj, engine.getGlobalPresetCatalog());
+
+    EXPECT_TRUE(obj->getTriggerBindings().empty());
 }
