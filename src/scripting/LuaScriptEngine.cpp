@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <nlohmann/json.hpp>
 
 #include "core/GameObject.hpp"
 #include "core/Model.hpp"
@@ -279,6 +280,45 @@ void LuaScriptEngine::clearSceneState() {
     inlineCallbacks_.clear();
     triggerCatalog_.clear();
     keyHandlers_.clear();
+    // globalPresetCatalog_ and moduleCache_ are intentionally NOT cleared
+}
+
+void LuaScriptEngine::loadPresets(const std::filesystem::path& path) {
+    if (!std::filesystem::exists(path)) {
+        spdlog::warn("LuaScriptEngine: presets file not found: '{}'", path.string());
+        return;
+    }
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        spdlog::error("LuaScriptEngine: cannot open presets file '{}'", path.string());
+        return;
+    }
+    try {
+        nlohmann::json j;
+        file >> j;
+        loadPresetsFromJson(j);
+        spdlog::info("LuaScriptEngine: loaded presets from '{}'", path.string());
+    } catch (const nlohmann::json::exception& e) {
+        spdlog::error("LuaScriptEngine: failed to parse presets '{}': {}", path.string(), e.what());
+    }
+}
+
+void LuaScriptEngine::loadPresetsFromJson(const nlohmann::json& j) {
+    if (!j.contains("presets") || !j["presets"].is_object()) {
+        spdlog::warn("LuaScriptEngine: presets JSON has no 'presets' object");
+        return;
+    }
+    for (const auto& [preset_name, events] : j["presets"].items()) {
+        if (!events.is_object()) {
+            continue;
+        }
+        auto& bindings = globalPresetCatalog_[preset_name];
+        for (const auto& [event, ref] : events.items()) {
+            if (ref.is_string()) {
+                bindings[event] = ref.get<std::string>();
+            }
+        }
+    }
 }
 
 void LuaScriptEngine::fireKeyEvent(const std::string& key_name) {
