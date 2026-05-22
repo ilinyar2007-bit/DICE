@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <fstream>
 #include <random>
+#include <string_view>
+#include <unordered_map>
 
 #include <nlohmann/json.hpp>
 
@@ -10,55 +12,30 @@
 #include <spdlog/spdlog.h>
 
 namespace {
+
+std::mt19937 makeRng() {
+    std::random_device rd;
+    return std::mt19937(rd());
+}
+
+std::mt19937 gRng = makeRng();
+
 std::string keyToString(sf::Keyboard::Key key) {
-    switch (key) {
-        case sf::Keyboard::Space:
-            return "Space";
-        case sf::Keyboard::Enter:
-            return "Enter";
-        case sf::Keyboard::Tab:
-            return "Tab";
-        case sf::Keyboard::Up:
-            return "Up";
-        case sf::Keyboard::Down:
-            return "Down";
-        case sf::Keyboard::Left:
-            return "Left";
-        case sf::Keyboard::Right:
-            return "Right";
-        case sf::Keyboard::W:
-            return "W";
-        case sf::Keyboard::A:
-            return "A";
-        case sf::Keyboard::S:
-            return "S";
-        case sf::Keyboard::D:
-            return "D";
-        case sf::Keyboard::E:
-            return "E";
-        case sf::Keyboard::Q:
-            return "Q";
-        case sf::Keyboard::R:
-            return "R";
-        case sf::Keyboard::F:
-            return "F";
-        case sf::Keyboard::I:
-            return "I";
-        case sf::Keyboard::X:
-            return "X";
-        case sf::Keyboard::Num1:
-            return "1";
-        case sf::Keyboard::Num2:
-            return "2";
-        case sf::Keyboard::Num3:
-            return "3";
-        case sf::Keyboard::Num4:
-            return "4";
-        case sf::Keyboard::Num5:
-            return "5";
-        default:
-            return "";
-    }
+    static const std::unordered_map<sf::Keyboard::Key, std::string_view> kKeyNames = {
+        {sf::Keyboard::Space, "Space"}, {sf::Keyboard::Enter, "Enter"},
+        {sf::Keyboard::Tab, "Tab"},     {sf::Keyboard::Up, "Up"},
+        {sf::Keyboard::Down, "Down"},   {sf::Keyboard::Left, "Left"},
+        {sf::Keyboard::Right, "Right"}, {sf::Keyboard::W, "W"},
+        {sf::Keyboard::A, "A"},         {sf::Keyboard::S, "S"},
+        {sf::Keyboard::D, "D"},         {sf::Keyboard::E, "E"},
+        {sf::Keyboard::Q, "Q"},         {sf::Keyboard::R, "R"},
+        {sf::Keyboard::F, "F"},         {sf::Keyboard::I, "I"},
+        {sf::Keyboard::X, "X"},         {sf::Keyboard::Num1, "1"},
+        {sf::Keyboard::Num2, "2"},      {sf::Keyboard::Num3, "3"},
+        {sf::Keyboard::Num4, "4"},      {sf::Keyboard::Num5, "5"},
+    };
+    const auto it = kKeyNames.find(key);
+    return it != kKeyNames.end() ? std::string{it->second} : std::string{};
 }
 
 } // namespace
@@ -135,12 +112,43 @@ void Controller::loadTexturesForModel() {
 
 void Controller::registerDefaultFunctions(const sf::Font* font) {
     lua_.registerFunction("cpp_rand", [](int lo, int hi) -> int {
-        static std::mt19937 rng(std::random_device{}());
-        return std::uniform_int_distribution<int>(lo, hi)(rng);
+        return std::uniform_int_distribution<int>(lo, hi)(gRng);
+    });
+
+    lua_.registerFunction("cpp_shuffle_children", [this](const std::string& id) {
+        if (auto obj = model_.getObject(id)) {
+            obj->shuffleChildren();
+        }
+    });
+
+    lua_.registerFunction("cpp_shuffle", [](sol::table t) {
+        if (!t.valid()) {
+            return;
+        }
+        std::vector<sol::object> items;
+        for (size_t i = 1;; ++i) {
+            sol::object obj = t[i];
+            if (!obj.valid()) {
+                break;
+            }
+            items.push_back(obj);
+        }
+        if (items.empty()) {
+            return;
+        }
+
+        std::shuffle(items.begin(), items.end(), gRng);
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            t[i + 1] = items[i];
+        }
     });
 
     auto makeText = [font](const std::string& str, float size, int r, int g, int b) {
         sf::Text t;
+        if (font == nullptr) {
+            return t;
+        }
         t.setFont(*font);
         t.setString(sf::String::fromUtf8(str.begin(), str.end()));
         t.setCharacterSize(static_cast<unsigned>(size));
@@ -152,11 +160,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
 
     lua_.registerFunction(
         "cpp_draw_text_left",
-        [this, font, makeText](
-            const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (font == nullptr) {
-                return;
-            }
+        [this, makeText](const std::string& s, float x, float y, float sz, int r, int g, int b) {
             auto t = makeText(s, sz, r, g, b);
             t.setPosition(x, y);
             window_.draw(t);
@@ -164,11 +168,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
 
     lua_.registerFunction(
         "cpp_draw_text_center",
-        [this, font, makeText](
-            const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (font == nullptr) {
-                return;
-            }
+        [this, makeText](const std::string& s, float x, float y, float sz, int r, int g, int b) {
             auto t = makeText(s, sz, r, g, b);
             const auto lb = t.getLocalBounds();
             t.setOrigin(lb.left + lb.width / 2.F, lb.top + lb.height / 2.F);
@@ -178,11 +178,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
 
     lua_.registerFunction(
         "cpp_draw_text_right",
-        [this, font, makeText](
-            const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (font == nullptr) {
-                return;
-            }
+        [this, makeText](const std::string& s, float x, float y, float sz, int r, int g, int b) {
             auto t = makeText(s, sz, r, g, b);
             const auto lb = t.getLocalBounds();
             t.setPosition(x - lb.width, y);

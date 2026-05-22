@@ -190,6 +190,32 @@ TEST_F(GameObjectTest, ParentChildRelationship) {
     EXPECT_EQ(child1->getParent(), nullptr);
 }
 
+TEST_F(GameObjectTest, ShuffleChildren) {
+    auto parent = std::make_shared<GameObject>("parent", "Parent");
+    std::vector<std::string> ids;
+    for (int i = 0; i < 20; ++i) {
+        auto id = "child_" + std::to_string(i);
+        ids.push_back(id);
+        parent->addChild(std::make_shared<GameObject>(id, id));
+    }
+
+    auto initial_children = parent->getChildren();
+    parent->shuffleChildren();
+    auto shuffled_children = parent->getChildren();
+
+    EXPECT_EQ(initial_children.size(), shuffled_children.size());
+
+    bool different = false;
+    for (size_t i = 0; i < initial_children.size(); ++i) {
+        if (initial_children[i]->getId() != shuffled_children[i]->getId()) {
+            different = true;
+            break;
+        }
+    }
+    // There is a tiny chance (1/20!) that the order remains the same, but it's negligible.
+    EXPECT_TRUE(different);
+}
+
 // TEST_F(GameObjectTest, ChildDuplicatePrevention) {
 //     auto parent = std::make_shared<GameObject>("parent", "Parent");
 //     auto child = std::make_shared<GameObject>("child", "Child");

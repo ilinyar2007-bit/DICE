@@ -87,6 +87,7 @@ public:
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
         const sol::protected_function fn = lua_[name];
         if (!fn.valid()) {
+            spdlog::warn("LuaScriptEngine::callGlobal: function '{}' not found", name);
             return;
         }
         auto result = fn(std::forward<Args>(args)...);

@@ -89,6 +89,8 @@ bool Application::init() {
     sf::Font* mainFont = nullptr;
     if (!config_.fonts.empty()) {
         mainFont = fonts_.get(config_.fonts[0].id).get();
+    } else {
+        spdlog::warn("no fonts are available");
     }
     controller_.registerDefaultFunctions(mainFont);
 

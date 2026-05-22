@@ -1,6 +1,7 @@
 #include "core/GameObject.hpp"
 
 #include <algorithm>
+#include <random>
 
 #include <spdlog/spdlog.h>
 
@@ -101,6 +102,12 @@ void GameObject::removeChild(const std::string& child_id) {
     } else {
         spdlog::warn("Child '{}' not found in object '{}'", child_id, id_);
     }
+}
+
+void GameObject::shuffleChildren() {
+    static std::mt19937 rng(std::random_device{}());
+    std::shuffle(children_.begin(), children_.end(), rng);
+    spdlog::debug("Shuffled children of object '{}'", id_);
 }
 
 std::shared_ptr<GameObject> GameObject::getChild(const std::string& child_id) {

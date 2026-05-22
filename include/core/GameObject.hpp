@@ -125,6 +125,8 @@ public:
 
     void removeChild(const std::string& child_id);
 
+    void shuffleChildren();
+
     std::shared_ptr<GameObject> getChild(const std::string& child_id);
 
     const std::vector<std::shared_ptr<GameObject>>& getChildren() const {
