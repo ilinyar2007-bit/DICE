@@ -63,3 +63,20 @@ TEST(BehaviorPresets, FileColonFunctionMissingFuncDoesNotCrash) {
     const bool fired = engine.fireEvent(kEventOnClick, obj.get());
     EXPECT_FALSE(fired);
 }
+
+TEST(BehaviorPresets, GameObjectParsesPresetsFromJson) {
+    GameObject obj;
+    nlohmann::json j = nlohmann::json::parse(R"({"presets":["A","B","C"]})");
+    obj.fromJson(j);
+    ASSERT_EQ(obj.getPresets().size(), 3u);
+    EXPECT_EQ(obj.getPresets()[0], "A");
+    EXPECT_EQ(obj.getPresets()[1], "B");
+    EXPECT_EQ(obj.getPresets()[2], "C");
+}
+
+TEST(BehaviorPresets, GameObjectEmptyPresetsWhenFieldMissing) {
+    GameObject obj;
+    nlohmann::json j = nlohmann::json::parse(R"({"id":"x"})");
+    obj.fromJson(j);
+    EXPECT_TRUE(obj.getPresets().empty());
+}

@@ -272,6 +272,10 @@ void GameObject::fromJson(const nlohmann::json& json) {
         }
     }
 
+    if (json.contains("presets") && json["presets"].is_array()) {
+        presets_ = json["presets"].get<std::vector<std::string>>();
+    }
+
     if (json.contains("textureFile")) {
         textureFile_ = json["textureFile"];
     }

@@ -232,6 +232,12 @@ public:
         triggerBindings_.clear();
     }
 
+    // ========== Behavior Presets ==========
+
+    const std::vector<std::string>& getPresets() const {
+        return presets_;
+    }
+
     // ========== Texture file ==========
 
     const std::string& getTextureFile() const {
@@ -264,6 +270,7 @@ private:
     std::string luaScript_;
     std::string textureFile_;
     std::unordered_map<std::string, std::string> triggerBindings_;
+    std::vector<std::string> presets_;
 };
 
 } // namespace dice::core
