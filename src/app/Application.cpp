@@ -92,6 +92,7 @@ bool Application::init() {
     } else {
         spdlog::warn("no fonts are available");
     }
+    lua_.loadPresets("assets/presets.json");
     controller_.registerDefaultFunctions(mainFont);
 
     if (!controller_.loadScene(config_.startScene)) {
