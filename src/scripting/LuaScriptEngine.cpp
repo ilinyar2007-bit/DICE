@@ -230,6 +230,8 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
     const auto& bindings = obj->getTriggerBindings();
     if (auto bit = bindings.find(event_name); bit != bindings.end()) {
         const std::string& trigger_ref = bit->second;
+        // Trigger refs with ':' use file:function notation (e.g. "scripts/mod.lua:on_click").
+        // Trigger names must not contain ':'.
         const auto colon_pos = trigger_ref.rfind(':');
         if (colon_pos != std::string::npos) {
             const std::string filepath = trigger_ref.substr(0, colon_pos);
