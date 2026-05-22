@@ -13,12 +13,10 @@
 
 namespace {
 
-std::mt19937 makeRng() {
-    std::random_device rd;
-    return std::mt19937(rd());
+std::mt19937& getRng() {
+    static std::mt19937 rng{std::random_device{}()};
+    return rng;
 }
-
-std::mt19937 gRng = makeRng();
 
 std::string keyToString(sf::Keyboard::Key key) {
     static const std::unordered_map<sf::Keyboard::Key, std::string_view> kKeyNames = {
@@ -112,7 +110,7 @@ void Controller::loadTexturesForModel() {
 
 void Controller::registerDefaultFunctions(const sf::Font* font) {
     lua_.registerFunction("cpp_rand", [](int lo, int hi) -> int {
-        return std::uniform_int_distribution<int>(lo, hi)(gRng);
+        return std::uniform_int_distribution<int>(lo, hi)(getRng());
     });
 
     lua_.registerFunction("cpp_shuffle_children", [this](const std::string& id) {
@@ -127,7 +125,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
         }
         std::vector<sol::object> items;
         for (size_t i = 1;; ++i) {
-            sol::object obj = t[i];
+            const sol::object obj = t[i];
             if (!obj.valid()) {
                 break;
             }
@@ -137,7 +135,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
             return;
         }
 
-        std::shuffle(items.begin(), items.end(), gRng);
+        std::shuffle(items.begin(), items.end(), getRng());
 
         for (size_t i = 0; i < items.size(); ++i) {
             t[i + 1] = items[i];
