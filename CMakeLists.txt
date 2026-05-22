@@ -244,6 +244,7 @@ target_link_libraries(dice_tests
 
 add_executable(dice_scripting_tests
   tests/scripting/test_LuaScriptEngine.cpp
+  tests/scripting/test_BehaviorPresets.cpp
 )
 
 target_link_libraries(dice_scripting_tests
@@ -255,6 +256,12 @@ target_link_libraries(dice_scripting_tests
 include(GoogleTest)
 gtest_discover_tests(dice_tests)
 gtest_discover_tests(dice_scripting_tests)
+
+add_custom_command(TARGET dice_scripting_tests POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_SOURCE_DIR}/tests/fixtures
+  $<TARGET_FILE_DIR:dice_scripting_tests>/tests/fixtures
+)
 
 option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
