@@ -1,18 +1,18 @@
+#include <nlohmann/json.hpp>
+
 #include "core/GameObject.hpp"
 #include "scripting/LuaScript.hpp"
 #include "scripting/LuaScriptEngine.hpp"
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
 
 using dice::core::GameObject;
-using dice::scripting::LuaScriptEngine;
 using dice::scripting::kEventOnClick;
+using dice::scripting::LuaScriptEngine;
 
 namespace {
 void applyPresets(
     dice::core::GameObject& obj,
-    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog)
-{
+    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog) {
     if (obj.getPresets().empty()) {
         return;
     }
