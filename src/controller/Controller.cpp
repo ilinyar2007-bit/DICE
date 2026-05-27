@@ -38,8 +38,7 @@ std::string keyToString(sf::Keyboard::Key key) {
 
 void mergePresetsIntoObject(
     dice::core::GameObject& obj,
-    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog)
-{
+    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog) {
     if (obj.getPresets().empty()) {
         return;
     }
@@ -47,8 +46,8 @@ void mergePresetsIntoObject(
     for (const auto& preset_name : obj.getPresets()) {
         auto it = catalog.find(preset_name);
         if (it == catalog.end()) {
-            spdlog::warn("Controller: unknown preset '{}' on object '{}'",
-                         preset_name, obj.getId());
+            spdlog::warn(
+                "Controller: unknown preset '{}' on object '{}'", preset_name, obj.getId());
             continue;
         }
         for (const auto& [event, ref] : it->second) {

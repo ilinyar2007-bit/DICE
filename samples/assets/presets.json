@@ -1,0 +1,30 @@
+{
+  "presets": {
+    "Checker":     { "on_drag_start": "checker_drag_start", "on_drag_end": "checker_drag_end" },
+    "PointMarker": { "on_click": "dest_click" },
+    "Rollable":    { "on_click": "roll_dice" },
+
+    "Highlightable": {
+      "on_hover":      "scripts/presets/highlightable.lua:on_hover",
+      "on_hover_exit": "scripts/presets/highlightable.lua:on_hover_exit"
+    },
+    "HoverScale": {
+      "on_hover":      "scripts/presets/hover_scale.lua:on_hover",
+      "on_hover_exit": "scripts/presets/hover_scale.lua:on_hover_exit"
+    },
+    "DragLift": {
+      "on_drag_start": "scripts/presets/drag_lift.lua:on_drag_start",
+      "on_drag_end":   "scripts/presets/drag_lift.lua:on_drag_end"
+    },
+    "Selectable": {
+      "on_click": "scripts/presets/selectable.lua:on_click"
+    },
+    "LogEvents": {
+      "on_click":      "scripts/presets/log_events.lua:on_click",
+      "on_hover":      "scripts/presets/log_events.lua:on_hover",
+      "on_hover_exit": "scripts/presets/log_events.lua:on_hover_exit",
+      "on_drag_start": "scripts/presets/log_events.lua:on_drag_start",
+      "on_drag_end":   "scripts/presets/log_events.lua:on_drag_end"
+    }
+  }
+}

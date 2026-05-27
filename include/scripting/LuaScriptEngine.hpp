@@ -13,10 +13,10 @@ extern "C" {
 #include <lua.h>
 #include <lualib.h>
 }
+#include <nlohmann/json.hpp>
 #include <sol/sol.hpp>
 
 #include <spdlog/spdlog.h>
-#include <nlohmann/json.hpp>
 
 namespace dice::core {
 class GameObject;
@@ -72,7 +72,7 @@ public:
     void loadPresetsFromJson(const nlohmann::json& j);
 
     const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>&
-        getGlobalPresetCatalog() const {
+    getGlobalPresetCatalog() const {
         return globalPresetCatalog_;
     }
 
@@ -114,7 +114,8 @@ private:
         inlineCallbacks_;
     std::unordered_map<std::string, sol::protected_function> triggerCatalog_;
     std::unordered_map<std::string, sol::protected_function> keyHandlers_;
-    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> globalPresetCatalog_;
+    std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+        globalPresetCatalog_;
     std::unordered_map<std::string, sol::table> moduleCache_;
 
     std::function<void(const std::string&)> sceneLoadCallback_;
