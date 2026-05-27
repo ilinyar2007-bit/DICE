@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <sstream>
-#include <nlohmann/json.hpp>
 
 #include "core/GameObject.hpp"
 #include "core/Model.hpp"
@@ -160,9 +159,7 @@ sol::environment LuaScriptEngine::makeEnvironment() {
 
 std::unique_ptr<LuaScript> LuaScriptEngine::createFromSource(const std::string& source) {
     if (auto env = makeEnvironment(); env) {
-        return std::make_unique<LuaScript>(source, std::move(env), lua_);
-    }
-    return nullptr;
+    return std::make_unique<LuaScript>(source, std::move(env), lua_);
 }
 
 std::unique_ptr<LuaScript> LuaScriptEngine::createFromFile(const std::filesystem::path& path) {
@@ -214,7 +211,7 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
 
     if (auto cit = inlineCallbacks_.find(obj->getId()); cit != inlineCallbacks_.end()) {
         if (auto eit = cit->second.find(event_name); eit != cit->second.end()) {
-            auto result = eit->second(obj);
+            if (auto result = eit->second(obj); !result.valid()) {
             if (!result.valid()) {
                 const sol::error err = result;
                 spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
@@ -229,40 +226,15 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
     // Check trigger catalog using object's trigger bindings
     const auto& bindings = obj->getTriggerBindings();
     if (auto bit = bindings.find(event_name); bit != bindings.end()) {
-        const std::string& trigger_ref = bit->second;
-        // Trigger refs with ':' use file:function notation (e.g. "scripts/mod.lua:on_click").
-        // Trigger names must not contain ':'.
-        const auto colon_pos = trigger_ref.rfind(':');
-        if (colon_pos != std::string::npos) {
-            const std::string filepath = trigger_ref.substr(0, colon_pos);
-            const std::string funcname = trigger_ref.substr(colon_pos + 1);
-            sol::table module = loadOrGetCachedModule(filepath);
-            if (module.valid()) {
-                sol::protected_function fn = module[funcname];
-                if (fn.valid()) {
-                    auto result = fn(obj);
-                    if (!result.valid()) {
-                        const sol::error err = result;
-                        spdlog::error("LuaScriptEngine: module '{}:{}' on '{}': {}",
-                                      filepath, funcname, obj->getId(), err.what());
-                    } else {
-                        fired = true;
-                    }
-                } else {
-                    spdlog::warn("LuaScriptEngine: function '{}' not found in module '{}'",
-                                 funcname, filepath);
-                }
+        if (auto tit = triggerCatalog_.find(bit->second); tit != triggerCatalog_.end()) {
+            if (auto result = tit->second(obj); !result.valid()) {
+                const sol::error err = result;
+                spdlog::error("LuaScriptEngine: trigger '{}' on '{}': {}",
+                              bit->second,
+                              obj->getId(),
+                              err.what());
             }
-        } else {
-            if (auto tit = triggerCatalog_.find(trigger_ref); tit != triggerCatalog_.end()) {
-                auto result = tit->second(obj);
-                if (!result.valid()) {
-                    const sol::error err = result;
-                    spdlog::error("LuaScriptEngine: trigger '{}' on '{}': {}",
-                                  trigger_ref, obj->getId(), err.what());
-                }
-                fired = true;
-            }
+            fired = true;
         }
     }
 
@@ -270,7 +242,8 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
 }
 
 bool LuaScriptEngine::executeGlobalScriptFromSource(const std::string& source) {
-    if (auto result = lua_.script(source, sol::script_pass_on_error); !result.valid()) {
+    auto result = lua_.script(source, sol::script_pass_on_error);
+    if (!result.valid()) {
         const sol::error err = result;
         spdlog::error("LuaScriptEngine: script source error: {}", err.what());
         return false;
@@ -279,7 +252,8 @@ bool LuaScriptEngine::executeGlobalScriptFromSource(const std::string& source) {
 }
 
 bool LuaScriptEngine::executeGlobalScript(const std::filesystem::path& path) {
-    if (auto result = lua_.script_file(path.string(), sol::script_pass_on_error); !result.valid()) {
+    auto result = lua_.script_file(path.string(), sol::script_pass_on_error);
+    if (!result.valid()) {
         const sol::error err = result;
         spdlog::error("LuaScriptEngine: global script error '{}': {}", path.string(), err.what());
         return false;
@@ -304,53 +278,15 @@ void LuaScriptEngine::clearSceneState() {
     inlineCallbacks_.clear();
     triggerCatalog_.clear();
     keyHandlers_.clear();
-    // globalPresetCatalog_ and moduleCache_ are intentionally NOT cleared
-}
-
-void LuaScriptEngine::loadPresets(const std::filesystem::path& path) {
-    if (!std::filesystem::exists(path)) {
-        spdlog::warn("LuaScriptEngine: presets file not found: '{}'", path.string());
-        return;
-    }
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        spdlog::error("LuaScriptEngine: cannot open presets file '{}'", path.string());
-        return;
-    }
-    try {
-        nlohmann::json j;
-        file >> j;
-        loadPresetsFromJson(j);
-        spdlog::info("LuaScriptEngine: loaded presets from '{}'", path.string());
-    } catch (const nlohmann::json::exception& e) {
-        spdlog::error("LuaScriptEngine: failed to parse presets '{}': {}", path.string(), e.what());
-    }
-}
-
-void LuaScriptEngine::loadPresetsFromJson(const nlohmann::json& j) {
-    if (!j.contains("presets") || !j["presets"].is_object()) {
-        spdlog::warn("LuaScriptEngine: presets JSON has no 'presets' object");
-        return;
-    }
-    for (const auto& [preset_name, events] : j["presets"].items()) {
-        if (!events.is_object()) {
-            continue;
-        }
-        auto& bindings = globalPresetCatalog_[preset_name];
-        for (const auto& [event, ref] : events.items()) {
-            if (ref.is_string()) {
-                bindings[event] = ref.get<std::string>();
-            }
-        }
-    }
 }
 
 void LuaScriptEngine::fireKeyEvent(const std::string& key_name) {
-    if (auto it = keyHandlers_.find(key_name); it != keyHandlers_.end()) {
-        if (auto result = it->second(); !result.valid()) {
-            const sol::error err = result;
-            spdlog::error("LuaScriptEngine: onKey '{}': {}", key_name, err.what());
-        }
+    if (auto it = keyHandlers_.find(key_name); it == keyHandlers_.end()) {
+        return;
+    }
+    if (auto result = it->second(); !result.valid()) {
+        const sol::error err = result;
+        spdlog::error("LuaScriptEngine: onKey '{}': {}", key_name, err.what());
     }
 }
 
@@ -373,7 +309,7 @@ void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
 
     engine.set_function("reloadScene", [this, get_current_path = std::move(get_current_path)]() {
         if (sceneLoadCallback_) {
-            if (const auto path = get_current_path(); !path.empty()) {
+            if (auto path = get_current_path(); !path.empty()) {
                 sceneLoadCallback_(path);
             }
         }
@@ -382,26 +318,6 @@ void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
 
 void LuaScriptEngine::setSceneLoadCallback(std::function<void(const std::string&)> cb) {
     sceneLoadCallback_ = std::move(cb);
-}
-
-sol::table LuaScriptEngine::loadOrGetCachedModule(const std::string& filepath) {
-    if (auto it = moduleCache_.find(filepath); it != moduleCache_.end()) {
-        return it->second;
-    }
-    auto result = lua_.script_file(filepath, sol::script_pass_on_error);
-    if (!result.valid()) {
-        const sol::error err = result;
-        spdlog::error("LuaScriptEngine: failed to load module '{}': {}", filepath, err.what());
-        return sol::table{};
-    }
-    sol::object obj = result;
-    if (!obj.is<sol::table>()) {
-        spdlog::error("LuaScriptEngine: module '{}' must return a table", filepath);
-        return sol::table{};
-    }
-    sol::table t = obj.as<sol::table>();
-    moduleCache_[filepath] = t;
-    return t;
 }
 
 } // namespace dice::scripting

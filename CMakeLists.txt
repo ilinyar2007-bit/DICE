@@ -219,6 +219,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
   ${CMAKE_SOURCE_DIR}/samples/game.json
   $<TARGET_FILE_DIR:${PROJECT_NAME}>/game.json
 )
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${CMAKE_SOURCE_DIR}/samples/assets/presets.json
+  $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/presets.json
+)
 
 # ----------------------------
 # Tests
