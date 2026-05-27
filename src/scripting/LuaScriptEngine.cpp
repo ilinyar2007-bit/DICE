@@ -184,7 +184,7 @@ bool LuaScriptEngine::attachScript(dice::core::GameObject& obj, bool force_reloa
         return false;
     }
 
-    if (!force_reload && scriptRegistry_.count(id) > 0) {
+    if (!force_reload && scriptRegistry_.contains(id)) {
         return true;
     }
 
@@ -201,6 +201,35 @@ bool LuaScriptEngine::attachScript(dice::core::GameObject& obj, bool force_reloa
     return true;
 }
 
+bool LuaScriptEngine::fireBindingRef(const std::string& ref, dice::core::GameObject* obj) {
+    if (const auto sep = ref.find(':'); sep != std::string::npos) {
+        const std::string file = ref.substr(0, sep);
+        const std::string func = ref.substr(sep + 1);
+        sol::table mod = loadOrGetCachedModule(file);
+        if (!mod.valid()) {
+            return false;
+        }
+        const sol::protected_function fn = mod[func];
+        if (!fn.valid()) {
+            return false;
+        }
+        if (auto result = fn(obj); !result.valid()) {
+            const sol::error err = result;
+            spdlog::error("LuaScriptEngine: '{}' on '{}': {}", ref, obj->getId(), err.what());
+        }
+        return true;
+    }
+    if (auto tit = triggerCatalog_.find(ref); tit != triggerCatalog_.end()) {
+        if (auto result = tit->second(obj); !result.valid()) {
+            const sol::error err = result;
+            spdlog::error(
+                "LuaScriptEngine: trigger '{}' on '{}': {}", ref, obj->getId(), err.what());
+        }
+        return true;
+    }
+    return false;
+}
+
 bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameObject* obj) {
     if (obj == nullptr) {
         return false;
@@ -214,44 +243,19 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
     if (auto cit = inlineCallbacks_.find(obj->getId()); cit != inlineCallbacks_.end()) {
         if (auto eit = cit->second.find(event_name); eit != cit->second.end()) {
             if (auto result = eit->second(obj); !result.valid()) {
-                if (!result.valid()) {
-                    const sol::error err = result;
-                    spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
-                                  event_name,
-                                  obj->getId(),
-                                  err.what());
-                }
-                fired = true;
+                const sol::error err = result;
+                spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
+                              event_name,
+                              obj->getId(),
+                              err.what());
             }
+            fired = true;
         }
     }
 
     const auto& bindings = obj->getTriggerBindings();
     if (auto bit = bindings.find(event_name); bit != bindings.end()) {
-        const std::string& ref = bit->second;
-        if (const auto sep = ref.find(':'); sep != std::string::npos) {
-            const std::string file = ref.substr(0, sep);
-            const std::string func = ref.substr(sep + 1);
-            sol::table mod = loadOrGetCachedModule(file);
-            if (mod.valid()) {
-                sol::protected_function fn = mod[func];
-                if (fn.valid()) {
-                    if (auto result = fn(obj); !result.valid()) {
-                        const sol::error err = result;
-                        spdlog::error(
-                            "LuaScriptEngine: '{}' on '{}': {}", ref, obj->getId(), err.what());
-                    }
-                    fired = true;
-                }
-            }
-        } else if (auto tit = triggerCatalog_.find(ref); tit != triggerCatalog_.end()) {
-            if (auto result = tit->second(obj); !result.valid()) {
-                const sol::error err = result;
-                spdlog::error(
-                    "LuaScriptEngine: trigger '{}' on '{}': {}", ref, obj->getId(), err.what());
-            }
-            fired = true;
-        }
+        fired |= fireBindingRef(bit->second, obj);
     }
 
     return fired;
