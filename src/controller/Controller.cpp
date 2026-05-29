@@ -55,10 +55,7 @@ void mergePresetsIntoObject(
     for (const auto& [event, ref] : obj.getTriggerBindings()) {
         finalBindings[event] = ref;
     }
-    obj.clearTriggerBindings();
-    for (const auto& [event, ref] : finalBindings) {
-        obj.setTriggerBinding(event, ref);
-    }
+    obj.setTriggerBindings(std::move(finalBindings));
 }
 
 } // namespace

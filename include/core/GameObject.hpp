@@ -231,6 +231,10 @@ public:
         triggerBindings_.clear();
     }
 
+    void setTriggerBindings(std::unordered_map<std::string, std::string> bindings) {
+        triggerBindings_ = std::move(bindings);
+    }
+
     // ========== Behavior Presets ==========
 
     const std::vector<std::string>& getPresets() const {
