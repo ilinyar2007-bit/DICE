@@ -105,7 +105,7 @@ void GameObject::removeChild(const std::string& child_id) {
 }
 
 void GameObject::shuffleChildren() {
-    static std::mt19937 rng(std::random_device{}());
+    static thread_local std::mt19937 rng(std::random_device{}());
     std::shuffle(children_.begin(), children_.end(), rng);
     spdlog::debug("Shuffled children of object '{}'", id_);
 }
