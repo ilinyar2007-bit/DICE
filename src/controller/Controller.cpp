@@ -23,12 +23,18 @@ std::string keyToString(sf::Keyboard::Key key) {
         return std::string{static_cast<char>(key - sf::Keyboard::A + 'A')};
     }
     static const std::unordered_map<sf::Keyboard::Key, std::string_view> kKeyNames = {
-        {sf::Keyboard::Space, "Space"}, {sf::Keyboard::Enter, "Enter"},
-        {sf::Keyboard::Tab, "Tab"},     {sf::Keyboard::Up, "Up"},
-        {sf::Keyboard::Down, "Down"},   {sf::Keyboard::Left, "Left"},
-        {sf::Keyboard::Right, "Right"}, {sf::Keyboard::Num1, "1"},
-        {sf::Keyboard::Num2, "2"},      {sf::Keyboard::Num3, "3"},
-        {sf::Keyboard::Num4, "4"},      {sf::Keyboard::Num5, "5"},
+        {sf::Keyboard::Space, "Space"},
+        {sf::Keyboard::Enter, "Enter"},
+        {sf::Keyboard::Tab, "Tab"},
+        {sf::Keyboard::Up, "Up"},
+        {sf::Keyboard::Down, "Down"},
+        {sf::Keyboard::Left, "Left"},
+        {sf::Keyboard::Right, "Right"},
+        {sf::Keyboard::Num1, "1"},
+        {sf::Keyboard::Num2, "2"},
+        {sf::Keyboard::Num3, "3"},
+        {sf::Keyboard::Num4, "4"},
+        {sf::Keyboard::Num5, "5"},
     };
     const auto it = kKeyNames.find(key);
     return it != kKeyNames.end() ? std::string{it->second} : std::string{};
