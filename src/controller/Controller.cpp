@@ -106,12 +106,10 @@ bool Controller::loadScene(const std::filesystem::path& path) {
     model_.fromJson(sceneJson);
 
     // Merge behavior presets into objects
-    {
-        const auto& catalog = lua_.getGlobalPresetCatalog();
-        model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
-            mergePresetsIntoObject(*obj, catalog);
-        });
-    }
+    const auto& catalog = lua_.getGlobalPresetCatalog();
+    model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
+        mergePresetsIntoObject(*obj, catalog);
+    });
 
     loadedTextureIds_.clear();
     loadTexturesForModel();
