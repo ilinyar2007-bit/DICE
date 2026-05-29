@@ -276,7 +276,7 @@ void Controller::handleEvent(const sf::Event& event) {
 
 void Controller::update(float dt) {
     if (!pendingScenePath_.empty()) {
-        std::filesystem::path path = pendingScenePath_;
+        const std::filesystem::path path = pendingScenePath_;
         pendingScenePath_.clear();
         if (!loadScene(path)) {
             spdlog::error("Controller: failed to load pending scene '{}'", path.string());
