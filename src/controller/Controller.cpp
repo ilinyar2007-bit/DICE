@@ -19,16 +19,14 @@ std::mt19937& getRng() {
 }
 
 std::string keyToString(sf::Keyboard::Key key) {
+    if (key >= sf::Keyboard::A && key <= sf::Keyboard::Z) {
+        return std::string{static_cast<char>(key - sf::Keyboard::A + 'A')};
+    }
     static const std::unordered_map<sf::Keyboard::Key, std::string_view> kKeyNames = {
         {sf::Keyboard::Space, "Space"}, {sf::Keyboard::Enter, "Enter"},
         {sf::Keyboard::Tab, "Tab"},     {sf::Keyboard::Up, "Up"},
         {sf::Keyboard::Down, "Down"},   {sf::Keyboard::Left, "Left"},
-        {sf::Keyboard::Right, "Right"}, {sf::Keyboard::W, "W"},
-        {sf::Keyboard::A, "A"},         {sf::Keyboard::S, "S"},
-        {sf::Keyboard::D, "D"},         {sf::Keyboard::E, "E"},
-        {sf::Keyboard::Q, "Q"},         {sf::Keyboard::R, "R"},
-        {sf::Keyboard::F, "F"},         {sf::Keyboard::I, "I"},
-        {sf::Keyboard::X, "X"},         {sf::Keyboard::Num1, "1"},
+        {sf::Keyboard::Right, "Right"}, {sf::Keyboard::Num1, "1"},
         {sf::Keyboard::Num2, "2"},      {sf::Keyboard::Num3, "3"},
         {sf::Keyboard::Num4, "4"},      {sf::Keyboard::Num5, "5"},
     };
