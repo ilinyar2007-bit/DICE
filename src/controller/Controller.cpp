@@ -123,11 +123,11 @@ bool Controller::loadScene(const std::filesystem::path& path) {
 void Controller::loadTexturesForModel() {
     model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
         const std::string& tf = obj->getTextureFile();
-        if (!tf.empty() && !loadedTextureIds_.contains(tf)) {
-            textures_.load(tf, tf);
-            loadedTextureIds_.insert(tf);
-        }
         if (!tf.empty()) {
+            if (!loadedTextureIds_.contains(tf)) {
+                textures_.load(tf, tf);
+                loadedTextureIds_.insert(tf);
+            }
             obj->setTexture(textures_.get(tf).get());
         }
         if (!obj->getLuaScript().empty()) {
