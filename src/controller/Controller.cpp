@@ -122,7 +122,7 @@ bool Controller::loadScene(const std::filesystem::path& path) {
     loadTexturesForModel();
     refreshFieldBounds();
 
-    currentScenePath_ = path.string();
+    currentScenePath_ = path;
     spdlog::info("Controller: scene '{}' loaded", path.string());
     return true;
 }
@@ -247,7 +247,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
                           });
 
     lua_.setSceneLoadCallback([this](const std::string& path) { pendingScenePath_ = path; });
-    lua_.registerModelAccess(model_, [this]() { return currentScenePath_; });
+    lua_.registerModelAccess(model_, [this]() { return currentScenePath_.string(); });
 }
 
 void Controller::handleEvent(const sf::Event& event) {
@@ -277,10 +277,10 @@ void Controller::handleEvent(const sf::Event& event) {
 
 void Controller::update(float dt) {
     if (!pendingScenePath_.empty()) {
-        std::string path = pendingScenePath_;
+        std::filesystem::path path = pendingScenePath_;
         pendingScenePath_.clear();
         if (!loadScene(path)) {
-            spdlog::error("Controller: failed to load pending scene '{}'", path);
+            spdlog::error("Controller: failed to load pending scene '{}'", path.string());
         }
         return;
     }
