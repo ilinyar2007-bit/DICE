@@ -178,8 +178,7 @@ public:
     }
 
     // Get a custom property
-    template <typename T>
-        requires std::default_initializable<T>
+    template <std::default_initializable T>
     T getProperty(const std::string& key, const T& default_value = T()) const {
         auto it = properties_.find(key);
         if (it != properties_.end()) {
