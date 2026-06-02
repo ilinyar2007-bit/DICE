@@ -8,6 +8,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "core/SceneValidator.hpp"
 #include "scripting/LuaScript.hpp"
 #include <spdlog/spdlog.h>
 
@@ -91,6 +92,12 @@ bool Controller::loadScene(const std::filesystem::path& path) {
         sceneJson = nlohmann::json::parse(file);
     } catch (const nlohmann::json::parse_error& e) {
         spdlog::error("Controller: failed to parse scene '{}': {}", path.string(), e.what());
+        return false;
+    }
+
+    dice::core::SceneValidator validator;
+    if (!validator.validate(sceneJson, path)) {
+        spdlog::error("Controller: scene '{}' failed validation", path.string());
         return false;
     }
 

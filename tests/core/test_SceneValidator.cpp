@@ -52,6 +52,18 @@ TEST(SceneValidatorTest, ObjectsIsNotArray) {
     EXPECT_EQ(validator.errors()[0].code_, MessageCode::E_OBJECTS_IS_NOT_AN_ARRAY);
 }
 
+TEST(SceneValidatorTest, ObjectCountLimitExceeded) {
+    SceneValidator validator;
+    nlohmann::json objects = nlohmann::json::array();
+    for (std::size_t i = 0; i <= SceneValidator::kMaxObjectCount; ++i) {
+        objects.push_back(makeValidObject("obj_" + std::to_string(i)));
+    }
+
+    validator.validate(makeValidScene(objects), test_path);
+    EXPECT_TRUE(validator.hasErrors());
+    EXPECT_EQ(validator.errors()[0].code_, MessageCode::E_OBJECT_COUNT_LIMIT_EXCEEDED);
+}
+
 // ========== Required fields ==========
 
 TEST(SceneValidatorTest, MissingId) {

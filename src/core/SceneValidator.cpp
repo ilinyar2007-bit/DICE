@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <unordered_set>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -15,6 +16,11 @@ bool SceneValidator::validate(const nlohmann::json& scene_json,
 
     checkSceneRoot(scene_json);
 
+    if (hasErrors()) {
+        return false;
+    }
+
+    checkObjectCount(scene_json);
     if (hasErrors()) {
         return false;
     }
@@ -70,6 +76,34 @@ void SceneValidator::checkSceneRoot(const nlohmann::json& scene_json) {
     if (!scene_json["objects"].is_array()) {
         addError(MessageCode::E_OBJECTS_IS_NOT_AN_ARRAY, "'objects' must be array", scene_json);
         return;
+    }
+}
+
+void SceneValidator::checkObjectCount(const nlohmann::json& scene_json) {
+    std::size_t count = 0;
+    std::vector<const nlohmann::json*> pending;
+
+    for (const auto& obj : scene_json["objects"]) {
+        pending.push_back(&obj);
+    }
+
+    while (!pending.empty()) {
+        const auto* obj = pending.back();
+        pending.pop_back();
+
+        ++count;
+        if (count > kMaxObjectCount) {
+            addError(MessageCode::E_OBJECT_COUNT_LIMIT_EXCEEDED,
+                     "Scene object count exceeds limit of " + std::to_string(kMaxObjectCount),
+                     scene_json);
+            return;
+        }
+
+        if (obj->is_object() && obj->contains("children") && (*obj)["children"].is_array()) {
+            for (const auto& child : (*obj)["children"]) {
+                pending.push_back(&child);
+            }
+        }
     }
 }
 
