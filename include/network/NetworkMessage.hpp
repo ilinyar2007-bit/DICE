@@ -1,11 +1,11 @@
 #ifndef DICE_NETWORK_NETWORK_MESSAGE_HPP
 #define DICE_NETWORK_NETWORK_MESSAGE_HPP
 
+#include <chrono>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
-#include <chrono>
-#include <functional>
 
 #include <nlohmann/json.hpp>
 
@@ -32,13 +32,7 @@ enum class MessageType : uint8_t {
     Chat
 };
 
-enum class PlayerStatus : uint8_t {
-    Connecting = 0,
-    Connected,
-    Ready,
-    InGame,
-    Disconnected
-};
+enum class PlayerStatus : uint8_t { Connecting = 0, Connected, Ready, InGame, Disconnected };
 
 struct ClientInfo {
     std::string id;
@@ -48,7 +42,7 @@ struct ClientInfo {
     PlayerStatus status = PlayerStatus::Connecting;
     std::chrono::steady_clock::time_point lastPing;
     std::string scriptsVersion;
-    
+
     std::string toString() const {
         return name + " (" + ip + ":" + std::to_string(port) + ")";
     }
@@ -69,27 +63,33 @@ struct NetworkMessage {
     uint64_t timestamp = 0;
     std::string fromId;
     nlohmann::json data;
-    
+
     std::vector<uint8_t> serialize() const;
     static NetworkMessage deserialize(const std::vector<uint8_t>& data);
 
-    static NetworkMessage createHandshake(const std::string& playerName, const std::string& scriptsVersion);
+    static NetworkMessage createHandshake(const std::string& playerName,
+                                          const std::string& scriptsVersion);
     static NetworkMessage createHandshakeAck(const std::string& clientId, bool gameStarted);
     static NetworkMessage createPlayerReady(const std::string& playerId);
     static NetworkMessage createStartGame();
     static NetworkMessage createSnapshot(const nlohmann::json& state);
-    static NetworkMessage createAction(const std::string& actionId, const std::string& functionName, const nlohmann::json& params);
+    static NetworkMessage createAction(const std::string& actionId,
+                                       const std::string& functionName,
+                                       const nlohmann::json& params);
     static NetworkMessage createActionAck(const std::string& actionId);
-    static NetworkMessage createActionReject(const std::string& actionId, const std::string& reason);
-    static NetworkMessage createLuaCall(const std::string& functionName, const nlohmann::json& params);
+    static NetworkMessage createActionReject(const std::string& actionId,
+                                             const std::string& reason);
+    static NetworkMessage createLuaCall(const std::string& functionName,
+                                        const nlohmann::json& params);
     static NetworkMessage createMoveObject(const std::string& objectId, float x, float y);
     static NetworkMessage createChat(const std::string& text);
     static NetworkMessage createPing();
     static NetworkMessage createPong();
-    static NetworkMessage createPlayerJoined(const std::string& playerId, const std::string& playerName);
+    static NetworkMessage createPlayerJoined(const std::string& playerId,
+                                             const std::string& playerName);
     static NetworkMessage createPlayerLeft(const std::string& playerId);
     static NetworkMessage createDisconnect(const std::string& reason = "");
-    
+
     bool isValid() const;
     std::string toString() const;
 };
