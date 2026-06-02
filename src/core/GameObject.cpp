@@ -1,6 +1,7 @@
 #include "core/GameObject.hpp"
 
 #include <algorithm>
+#include <random>
 
 #include <spdlog/spdlog.h>
 
@@ -8,11 +9,11 @@ namespace dice::core {
 
 GameObject::GameObject()
     : name_("Unnamed"), type_("generic"), zOrder_(0), parent_(nullptr), active_(true),
-      visible_(true), draggable_(true) {}
+      visible_(true), draggable_(false) {}
 
 GameObject::GameObject(std::string id, std::string name)
     : id_(std::move(id)), name_(std::move(name)), type_("generic"), zOrder_(0), parent_(nullptr),
-      active_(true), visible_(true), draggable_(true) {}
+      active_(true), visible_(true), draggable_(false) {}
 
 // ========== Metadata ==========
 
@@ -103,6 +104,12 @@ void GameObject::removeChild(const std::string& child_id) {
     }
 }
 
+void GameObject::shuffleChildren() {
+    static thread_local std::mt19937 rng(std::random_device{}());
+    std::shuffle(children_.begin(), children_.end(), rng);
+    spdlog::debug("Shuffled children of object '{}'", id_);
+}
+
 std::shared_ptr<GameObject> GameObject::getChild(const std::string& child_id) {
     auto it = std::find_if(children_.begin(), children_.end(), [&child_id](const auto& c) {
         return c->getId() == child_id;
@@ -176,6 +183,13 @@ nlohmann::json GameObject::toJson() const { // NOLINT(misc-no-recursion)
         json["luaScript"] = luaScript_;
     }
 
+    if (!triggerBindings_.empty()) {
+        json["triggers"] = nlohmann::json::object();
+        for (const auto& [event, name] : triggerBindings_) {
+            json["triggers"][event] = name;
+        }
+    }
+
     if (!textureFile_.empty()) {
         json["textureFile"] = textureFile_;
     }
@@ -247,6 +261,19 @@ void GameObject::fromJson(const nlohmann::json& json) {
 
     if (json.contains("luaScript")) {
         luaScript_ = json["luaScript"];
+    }
+
+    triggerBindings_.clear();
+    if (json.contains("triggers") && json["triggers"].is_object()) {
+        for (const auto& [event, triggerName] : json["triggers"].items()) {
+            if (triggerName.is_string()) {
+                triggerBindings_[event] = triggerName.get<std::string>();
+            }
+        }
+    }
+
+    if (json.contains("presets") && json["presets"].is_array()) {
+        presets_ = json["presets"].get<std::vector<std::string>>();
     }
 
     if (json.contains("textureFile")) {

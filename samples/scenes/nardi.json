@@ -1,0 +1,115 @@
+{
+  "scripts": ["scripts/nardi.lua"],
+  "objects": [
+    {
+      "id": "board", "type": "GameObject",
+      "position": [640, 360], "scale": [0.8, 0.667],
+      "textureFile": "assets/board_nard.png", "zOrder": 0
+    },
+
+    {
+      "id": "die_1", "type": "GameObject",
+      "position": [615, 360], "scale": [0.75, 0.75],
+      "textureFile": "assets/dieWhite_border1.png",
+      "zOrder": 8, "draggable": true,
+      "presets": ["Rollable"]
+    },
+    {
+      "id": "die_2", "type": "GameObject",
+      "position": [665, 360], "scale": [0.75, 0.75],
+      "textureFile": "assets/dieRed_border1.png",
+      "zOrder": 8, "draggable": true,
+      "presets": ["Rollable"]
+    },
+
+    {
+      "id": "btn_end_turn", "type": "GameObject",
+      "position": [640, 695], "scale": [4.2, 0.62],
+      "textureFile": "assets/button.png",
+      "zOrder": 8,
+      "triggers": { "on_click": "end_turn" }
+    },
+    {
+      "id": "btn_new_game", "type": "GameObject",
+      "position": [-300, 695], "scale": [3.5, 0.62],
+      "textureFile": "assets/button.png",
+      "zOrder": 8, "active": false,
+      "triggers": { "on_click": "new_game" }
+    },
+
+    {
+      "id": "pt_bearoff_w", "type": "GameObject",
+      "position": [60, 360], "scale": [0.75, 0.75],
+      "textureFile": "assets/pieceWhite_border11.png",
+      "zOrder": 5, "visible": false,
+      "presets": ["PointMarker"],
+      "properties": { "point_id": 25 }
+    },
+    {
+      "id": "pt_bearoff_b", "type": "GameObject",
+      "position": [1220, 360], "scale": [0.75, 0.75],
+      "textureFile": "assets/pieceBlack_border11.png",
+      "zOrder": 5, "visible": false,
+      "presets": ["PointMarker"],
+      "properties": { "point_id": 0 }
+    },
+
+    { "id": "w1",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w2",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w3",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w4",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w5",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w6",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w7",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w8",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w9",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w10", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w11", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w12", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w13", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w14", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+    { "id": "w15", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 1 } },
+
+    { "id": "b1",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b2",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b3",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b4",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b5",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b6",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b7",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b8",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b9",  "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b10", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b11", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b12", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b13", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b14", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+    { "id": "b15", "type": "GameObject", "position": [-100, -100], "scale": [1.0, 1.0], "textureFile": "assets/pieceBlack_border11.png", "zOrder": 3, "draggable": true, "presets": ["Checker"], "properties": { "player": 2 } },
+
+    { "id": "pt1",  "type": "GameObject", "position": [1180, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 1  } },
+    { "id": "pt2",  "type": "GameObject", "position": [1088, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 2  } },
+    { "id": "pt3",  "type": "GameObject", "position": [ 996, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 3  } },
+    { "id": "pt4",  "type": "GameObject", "position": [ 904, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 4  } },
+    { "id": "pt5",  "type": "GameObject", "position": [ 812, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 5  } },
+    { "id": "pt6",  "type": "GameObject", "position": [ 720, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 6  } },
+    { "id": "pt7",  "type": "GameObject", "position": [ 568, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 7  } },
+    { "id": "pt8",  "type": "GameObject", "position": [ 476, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 8  } },
+    { "id": "pt9",  "type": "GameObject", "position": [ 384, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 9  } },
+    { "id": "pt10", "type": "GameObject", "position": [ 292, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 10 } },
+    { "id": "pt11", "type": "GameObject", "position": [ 200, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 11 } },
+    { "id": "pt12", "type": "GameObject", "position": [ 108, 450], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 12 } },
+
+    { "id": "pt13", "type": "GameObject", "position": [ 108, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 13 } },
+    { "id": "pt14", "type": "GameObject", "position": [ 200, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 14 } },
+    { "id": "pt15", "type": "GameObject", "position": [ 292, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 15 } },
+    { "id": "pt16", "type": "GameObject", "position": [ 384, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 16 } },
+    { "id": "pt17", "type": "GameObject", "position": [ 476, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 17 } },
+    { "id": "pt18", "type": "GameObject", "position": [ 568, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 18 } },
+    { "id": "pt19", "type": "GameObject", "position": [ 720, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 19 } },
+    { "id": "pt20", "type": "GameObject", "position": [ 812, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 20 } },
+    { "id": "pt21", "type": "GameObject", "position": [ 904, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 21 } },
+    { "id": "pt22", "type": "GameObject", "position": [ 996, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 22 } },
+    { "id": "pt23", "type": "GameObject", "position": [1088, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 23 } },
+    { "id": "pt24", "type": "GameObject", "position": [1180, 270], "scale": [0.6, 0.6], "textureFile": "assets/pieceWhite_border11.png", "zOrder": 5, "visible": false, "presets": ["PointMarker"], "properties": { "point_id": 24 } }
+  ]
+}

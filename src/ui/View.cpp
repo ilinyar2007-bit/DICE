@@ -7,10 +7,6 @@ namespace dice::view {
 
 View::View(sf::RenderWindow& window) : window_(window) {
     spdlog::info("View initialized (basic rendering)");
-
-    if (!window_.isOpen()) {
-        spdlog::error("View constructed with closed window!");
-    }
 }
 
 // ========== Basic methods ==========
@@ -93,15 +89,16 @@ void View::drawObjects(const std::vector<std::shared_ptr<core::GameObject>>& obj
     sortObjectsByZOrder(sortedObjects_);
 
     for (const auto& obj : sortedObjects_) {
-        if (obj->isVisible()) {
+        if (obj->isVisible() && obj->getParent() == nullptr) {
             drawObject(obj);
         }
     }
 }
 
 void View::drawObject(const std::shared_ptr<core::GameObject>& obj) {
+    // Hierarchical rendering: obj->draw will recursively draw its children
+    // using the parent's transformation state.
     window_.draw(*obj);
-    // TODO
 }
 
 // ========== Interface rendering ==========

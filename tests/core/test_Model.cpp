@@ -243,3 +243,22 @@ TEST(ModelCleanTest, ClearEmptiesRootsAndIndex) {
     EXPECT_EQ(model.getObject("root"), nullptr);
     EXPECT_EQ(model.getObject("child"), nullptr);
 }
+
+TEST(ModelCleanTest, UnregisterCallbackCalledOnRemove) {
+    Model model;
+    auto root = std::make_shared<GameObject>();
+    root->setId("root");
+    auto child = std::make_shared<GameObject>();
+    child->setId("child");
+    root->addChild(child);
+    model.addRootObject(root);
+
+    std::vector<std::string> removedIds;
+    model.setUnregisterCallback([&](const std::string& id) { removedIds.push_back(id); });
+
+    model.removeObject("root");
+
+    ASSERT_EQ(removedIds.size(), 2U);
+    EXPECT_EQ(removedIds[0], "root");
+    EXPECT_EQ(removedIds[1], "child");
+}

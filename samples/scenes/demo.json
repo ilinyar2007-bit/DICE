@@ -1,4 +1,5 @@
 {
+  "scripts": ["scripts/dice_demo.lua"],
   "objects": [
     {
       "type": "GameObject",
@@ -27,11 +28,14 @@
       "rotation": 0.0,
       "scale": [1.0, 1.0],
       "color": [255, 255, 255, 255],
-      "textureFile": "assets/dieWhitтe_border1.png",
+      "textureFile": "assets/dieWhite_border1.png",
       "zOrder": 10,
       "active": true,
       "visible": true,
       "draggable": true,
+      "triggers": {
+        "on_click": "roll_dice"
+      },
       "luaScript": "scripts/dice.lua",
       "properties": {"player": 1}
     },
@@ -50,6 +54,9 @@
       "active": true,
       "visible": true,
       "draggable": true,
+      "triggers": {
+        "on_click": "roll_dice"
+      },
       "luaScript": "scripts/dice.lua",
       "properties": {"player": 2}
     },
@@ -67,7 +74,10 @@
       "zOrder": 5,
       "active": true,
       "visible": true,
-      "draggable": false
+      "draggable": false,
+      "triggers": {
+        "on_click": "end_turn"
+      }
     }
   ]
 }

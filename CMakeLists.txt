@@ -104,7 +104,6 @@ add_library(dice_core STATIC
   src/components/Card.cpp
   src/ui/View.cpp
   src/core/Model.cpp
-  src/components/Card.cpp
   src/core/Action.cpp
   src/core/ActionManager.cpp
   src/core/SceneValidator.cpp
@@ -160,6 +159,8 @@ endif()
 # ----------------------------
 add_library(dice_controller STATIC
   src/controller/Controller.cpp
+  src/app/Application.cpp
+  src/app/ConfigLoader.cpp
 )
 
 target_include_directories(dice_controller
@@ -193,7 +194,7 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
 )
 
-set(RESOURCE_DIRS assets scripts scenes)
+set(RESOURCE_DIRS assets)
 
 foreach(dir IN LISTS RESOURCE_DIRS)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -202,6 +203,27 @@ foreach(dir IN LISTS RESOURCE_DIRS)
     $<TARGET_FILE_DIR:${PROJECT_NAME}>/${dir}
   )
 endforeach()
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_SOURCE_DIR}/samples/scripts
+  $<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_SOURCE_DIR}/samples/scenes
+  $<TARGET_FILE_DIR:${PROJECT_NAME}>/scenes
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${CMAKE_SOURCE_DIR}/samples/game.json
+  $<TARGET_FILE_DIR:${PROJECT_NAME}>/game.json
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${CMAKE_SOURCE_DIR}/samples/assets/presets.json
+  $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/presets.json
+)
 
 # ----------------------------
 # Tests
@@ -227,6 +249,7 @@ target_link_libraries(dice_tests
 
 add_executable(dice_scripting_tests
   tests/scripting/test_LuaScriptEngine.cpp
+  tests/scripting/test_BehaviorPresets.cpp
 )
 
 target_link_libraries(dice_scripting_tests
@@ -238,6 +261,12 @@ target_link_libraries(dice_scripting_tests
 include(GoogleTest)
 gtest_discover_tests(dice_tests)
 gtest_discover_tests(dice_scripting_tests)
+
+add_custom_command(TARGET dice_scripting_tests POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_SOURCE_DIR}/tests/fixtures
+  $<TARGET_FILE_DIR:dice_scripting_tests>/tests/fixtures
+)
 
 option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
 

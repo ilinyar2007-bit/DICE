@@ -1,6 +1,7 @@
 #ifndef DICE_IOBJECT_FACTORY_HPP
 #define DICE_IOBJECT_FACTORY_HPP
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -8,16 +9,18 @@
 
 namespace dice::core {
 
-enum class ObjectType {
-    GameObject,
-    Chip,
-    Card,
+enum class ObjectType : std::uint8_t {
+    GAME_OBJECT,
+    CHIP,
+    CARD,
 };
 
 inline ObjectType objectTypeFromString(const std::string& s) {
-    if (s == "Chip")       return ObjectType::Chip;
-    if (s == "Card")       return ObjectType::Card;
-    return ObjectType::GameObject;
+    if (s == "Chip")
+        return ObjectType::CHIP;
+    if (s == "Card")
+        return ObjectType::CARD;
+    return ObjectType::GAME_OBJECT;
 }
 
 class IObjectFactory {

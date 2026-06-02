@@ -22,6 +22,7 @@ protected:
     void SetUp() override {
         spdlog::set_level(spdlog::level::off);
         window.create(sf::VideoMode(800, 600), "Test Window", sf::Style::Default);
+        window.setVisible(false);
         view = std::make_unique<View>(window);
 
         ViewConfig config;

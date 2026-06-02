@@ -376,6 +376,47 @@ TEST(SceneValidatorTest, PropertiesIsNotObject) {
     EXPECT_EQ(validator.errors()[0].code_, MessageCode::E_PROPERTIES_IS_NOT_AN_OBJECT);
 }
 
+// ========== Scripts ==========
+
+TEST(SceneValidatorScripts, ValidScriptsArray) {
+    dice::core::SceneValidator v;
+    const nlohmann::json scene = {
+        {"scripts", nlohmann::json::array({"scripts/game.lua"})},
+        {"objects", nlohmann::json::array({{{"id", "obj1"}, {"type", "GameObject"}}})}};
+    v.validate(scene, ".");
+    EXPECT_FALSE(v.hasErrors());
+}
+
+TEST(SceneValidatorScripts, ScriptsNotArray) {
+    dice::core::SceneValidator v;
+    const nlohmann::json scene = {
+        {"scripts", "scripts/game.lua"},
+        {"objects", nlohmann::json::array({{{"id", "obj1"}, {"type", "GameObject"}}})}};
+    v.validate(scene, ".");
+    EXPECT_TRUE(v.hasErrors());
+}
+
+TEST(SceneValidatorTriggers, ValidTriggers) {
+    dice::core::SceneValidator v;
+    const nlohmann::json scene = {
+        {"objects",
+         nlohmann::json::array({{{"id", "obj1"},
+                                 {"type", "GameObject"},
+                                 {"triggers", {{"on_click", "roll_dice"}}}}})}};
+    v.validate(scene, ".");
+    EXPECT_FALSE(v.hasErrors());
+}
+
+TEST(SceneValidatorTriggers, TriggersNotObject) {
+    dice::core::SceneValidator v;
+    const nlohmann::json scene = {
+        {"objects",
+         nlohmann::json::array(
+             {{{"id", "obj1"}, {"type", "GameObject"}, {"triggers", "on_click"}}})}};
+    v.validate(scene, ".");
+    EXPECT_TRUE(v.hasErrors());
+}
+
 // ========== State reset ==========
 
 TEST(SceneValidatorTest, ValidatorClearsStateBetweenValidations) {
@@ -397,4 +438,24 @@ TEST(SceneValidatorTest, MultipleErrorsCollected) {
     });
     validator.validate(scene, test_path);
     EXPECT_GE(validator.errors().size(), 2U);
+}
+
+TEST(SceneValidatorTest, RecursiveObjectValidation) {
+    SceneValidator validator;
+    const nlohmann::json child = {{"id", 123}, {"type", "GameObject"}}; // Bad ID
+    const nlohmann::json parent = {
+        {"id", "parent"}, {"type", "GameObject"}, {"children", nlohmann::json::array({child})}};
+    const nlohmann::json scene = {{"objects", nlohmann::json::array({parent})}};
+
+    validator.validate(scene, test_path);
+    EXPECT_TRUE(validator.hasErrors());
+
+    bool found = false;
+    for (const auto& e : validator.errors()) {
+        if (e.code_ == MessageCode::E_ID_IS_NOT_A_STRING) {
+            found = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(found);
 }

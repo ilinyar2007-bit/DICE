@@ -26,6 +26,10 @@ public:
     // ========== Load by filename ==========
     std::shared_ptr<Resource> load(const std::string& id, const std::string& filename) {
         if (auto it = resources_.find(id); it != resources_.end()) {
+            if (it->second.first == filename) {
+                return it->second.second;
+            }
+
             spdlog::error(
                 "ResourceManager: failed to load file from '{}' by assigning existing id - '{}'",
                 filename,
@@ -81,6 +85,10 @@ public:
     void clear() {
         resources_.clear();
     };
+
+    bool isEmpty() const {
+        return resources_.empty();
+    }
 
     // ========== Set fallback resource ==========
     void setFallback(std::shared_ptr<Resource> fallback) {

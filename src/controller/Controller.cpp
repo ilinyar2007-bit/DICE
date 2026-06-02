@@ -3,19 +3,77 @@
 #include <algorithm>
 #include <fstream>
 #include <random>
+#include <string_view>
+#include <unordered_map>
 
 #include <nlohmann/json.hpp>
 
 #include "scripting/LuaScript.hpp"
 #include <spdlog/spdlog.h>
 
+namespace {
+
+std::mt19937& getRng() {
+    static std::mt19937 rng{std::random_device{}()};
+    return rng;
+}
+
+std::string keyToString(sf::Keyboard::Key key) {
+    if (key >= sf::Keyboard::A && key <= sf::Keyboard::Z) {
+        return std::string{static_cast<char>(key - sf::Keyboard::A + 'A')};
+    }
+    static const std::unordered_map<sf::Keyboard::Key, std::string_view> kKeyNames = {
+        {sf::Keyboard::Space, "Space"},
+        {sf::Keyboard::Enter, "Enter"},
+        {sf::Keyboard::Tab, "Tab"},
+        {sf::Keyboard::Up, "Up"},
+        {sf::Keyboard::Down, "Down"},
+        {sf::Keyboard::Left, "Left"},
+        {sf::Keyboard::Right, "Right"},
+        {sf::Keyboard::Num1, "1"},
+        {sf::Keyboard::Num2, "2"},
+        {sf::Keyboard::Num3, "3"},
+        {sf::Keyboard::Num4, "4"},
+        {sf::Keyboard::Num5, "5"},
+    };
+    const auto it = kKeyNames.find(key);
+    return it != kKeyNames.end() ? std::string{it->second} : std::string{};
+}
+
+void mergePresetsIntoObject(
+    dice::core::GameObject& obj,
+    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& catalog) {
+    if (obj.getPresets().empty()) {
+        return;
+    }
+    std::unordered_map<std::string, std::string> finalBindings;
+    for (const auto& preset_name : obj.getPresets()) {
+        auto it = catalog.find(preset_name);
+        if (it == catalog.end()) {
+            spdlog::warn(
+                "Controller: unknown preset '{}' on object '{}'", preset_name, obj.getId());
+            continue;
+        }
+        for (const auto& [event, ref] : it->second) {
+            finalBindings[event] = ref;
+        }
+    }
+    for (const auto& [event, ref] : obj.getTriggerBindings()) {
+        finalBindings[event] = ref;
+    }
+    obj.setTriggerBindings(std::move(finalBindings));
+}
+
+} // namespace
+
 namespace dice::controller {
 
 Controller::Controller(dice::core::Model& model,
                        dice::view::View& view,
                        dice::scripting::LuaScriptEngine& lua,
-                       sf::RenderWindow& window)
-    : model_(model), view_(view), lua_(lua), window_(window),
+                       sf::RenderWindow& window,
+                       dice::core::ResourceManager<sf::Texture>& textures)
+    : model_(model), view_(view), lua_(lua), window_(window), textures_(textures),
       fieldBounds_(0.F,
                    0.F,
                    static_cast<float>(window.getSize().x),
@@ -27,22 +85,56 @@ bool Controller::loadScene(const std::filesystem::path& path) {
         spdlog::error("Controller: cannot open scene '{}'", path.string());
         return false;
     }
-    model_.fromJson(nlohmann::json::parse(file));
+
+    nlohmann::json sceneJson;
+    try {
+        sceneJson = nlohmann::json::parse(file);
+    } catch (const nlohmann::json::parse_error& e) {
+        spdlog::error("Controller: failed to parse scene '{}': {}", path.string(), e.what());
+        return false;
+    }
+
+    draggedObj_.reset();
+    hoveredObj_.reset();
+    wasDragging_ = false;
+
+    lua_.clearSceneState();
+
+    if (sceneJson.contains("scripts") && sceneJson["scripts"].is_array()) {
+        for (const auto& entry : sceneJson["scripts"]) {
+            if (entry.is_string()) {
+                lua_.executeGlobalScript(entry.get<std::string>());
+            }
+        }
+    }
+
+    model_.clear();
+    model_.fromJson(sceneJson);
+
+    // Merge behavior presets into objects
+    const auto& catalog = lua_.getGlobalPresetCatalog();
+    model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
+        mergePresetsIntoObject(*obj, catalog);
+    });
+
+    loadedTextureIds_.clear();
+    loadTexturesForModel();
     refreshFieldBounds();
+
+    currentScenePath_ = path;
     spdlog::info("Controller: scene '{}' loaded", path.string());
     return true;
 }
 
-void Controller::loadTextures(dice::core::ResourceManager<sf::Texture>& textures) {
+void Controller::loadTexturesForModel() {
     model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
         const std::string& tf = obj->getTextureFile();
         if (!tf.empty()) {
             if (!loadedTextureIds_.contains(tf)) {
-                textures.load(tf, tf);
+                textures_.load(tf, tf);
                 loadedTextureIds_.insert(tf);
-                spdlog::info("Controller: texture loaded '{}'", tf);
             }
-            obj->setTexture(textures.get(tf).get());
+            obj->setTexture(textures_.get(tf).get());
         }
         if (!obj->getLuaScript().empty()) {
             lua_.attachScript(*obj);
@@ -50,15 +142,45 @@ void Controller::loadTextures(dice::core::ResourceManager<sf::Texture>& textures
     });
 }
 
-void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Texture>& textures,
-                                          const sf::Font* font) {
+void Controller::registerDefaultFunctions(const sf::Font* font) {
     lua_.registerFunction("cpp_rand", [](int lo, int hi) -> int {
-        static std::mt19937 rng(std::random_device{}());
-        return std::uniform_int_distribution<int>(lo, hi)(rng);
+        return std::uniform_int_distribution<int>(lo, hi)(getRng());
+    });
+
+    lua_.registerFunction("cpp_shuffle_children", [this](const std::string& id) {
+        if (auto obj = model_.getObject(id)) {
+            obj->shuffleChildren();
+        }
+    });
+
+    lua_.registerFunction("cpp_shuffle", [](sol::table t) {
+        if (!t.valid()) {
+            return;
+        }
+        std::vector<sol::object> items;
+        for (size_t i = 1;; ++i) {
+            const sol::object obj = t[i];
+            if (!obj.valid()) {
+                break;
+            }
+            items.push_back(obj);
+        }
+        if (items.empty()) {
+            return;
+        }
+
+        std::shuffle(items.begin(), items.end(), getRng());
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            t[i + 1] = items[i];
+        }
     });
 
     auto makeText = [font](const std::string& str, float size, int r, int g, int b) {
         sf::Text t;
+        if (font == nullptr) {
+            return t;
+        }
         t.setFont(*font);
         t.setString(sf::String::fromUtf8(str.begin(), str.end()));
         t.setCharacterSize(static_cast<unsigned>(size));
@@ -70,11 +192,7 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
 
     lua_.registerFunction(
         "cpp_draw_text_left",
-        [this, font, makeText](
-            const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (font == nullptr) {
-                return;
-            }
+        [this, makeText](const std::string& s, float x, float y, float sz, int r, int g, int b) {
             auto t = makeText(s, sz, r, g, b);
             t.setPosition(x, y);
             window_.draw(t);
@@ -82,11 +200,7 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
 
     lua_.registerFunction(
         "cpp_draw_text_center",
-        [this, font, makeText](
-            const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (font == nullptr) {
-                return;
-            }
+        [this, makeText](const std::string& s, float x, float y, float sz, int r, int g, int b) {
             auto t = makeText(s, sz, r, g, b);
             const auto lb = t.getLocalBounds();
             t.setOrigin(lb.left + lb.width / 2.F, lb.top + lb.height / 2.F);
@@ -96,11 +210,7 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
 
     lua_.registerFunction(
         "cpp_draw_text_right",
-        [this, font, makeText](
-            const std::string& s, float x, float y, float sz, int r, int g, int b) {
-            if (font == nullptr) {
-                return;
-            }
+        [this, makeText](const std::string& s, float x, float y, float sz, int r, int g, int b) {
             auto t = makeText(s, sz, r, g, b);
             const auto lb = t.getLocalBounds();
             t.setPosition(x - lb.width, y);
@@ -123,17 +233,20 @@ void Controller::registerDefaultFunctions(dice::core::ResourceManager<sf::Textur
                           });
 
     lua_.registerFunction("cpp_set_obj_texture",
-                          [this, &textures](const std::string& obj_id, const std::string& path) {
+                          [this](const std::string& obj_id, const std::string& path) {
                               auto obj = model_.getObject(obj_id);
                               if (!obj) {
                                   return;
                               }
                               if (!loadedTextureIds_.contains(path)) {
-                                  textures.load(path, path);
+                                  textures_.load(path, path);
                                   loadedTextureIds_.insert(path);
                               }
-                              obj->setTexture(textures.get(path).get());
+                              obj->setTexture(textures_.get(path).get());
                           });
+
+    lua_.setSceneLoadCallback([this](const std::string& path) { pendingScenePath_ = path; });
+    lua_.registerModelAccess(model_, [this]() { return currentScenePath_.string(); });
 }
 
 void Controller::handleEvent(const sf::Event& event) {
@@ -151,10 +264,25 @@ void Controller::handleEvent(const sf::Event& event) {
         event.mouseButton.button == sf::Mouse::Left) // NOLINT
         onMouseReleased(event.mouseButton);          // NOLINT
 
+    if (event.type == sf::Event::KeyPressed) {
+        const std::string keyName = keyToString(event.key.code); // NOLINT
+        if (!keyName.empty()) {
+            lua_.fireKeyEvent(keyName);
+        }
+    }
+
     view_.handleEvent(event);
 }
 
 void Controller::update(float dt) {
+    if (!pendingScenePath_.empty()) {
+        const std::filesystem::path path = pendingScenePath_;
+        pendingScenePath_.clear();
+        if (!loadScene(path)) {
+            spdlog::error("Controller: failed to load pending scene '{}'", path.string());
+        }
+        return;
+    }
     lua_.callGlobal("update", dt);
     view_.update(dt);
 }
@@ -171,6 +299,18 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
     const auto objs = collectObjects();
     auto picked = view_.pickObject(wp, objs);
 
+    if (!picked) {
+        spdlog::info("Controller: click at ({},{}) — no object picked", ev.x, ev.y);
+    } else {
+        spdlog::info("Controller: click at ({},{}) — picked '{}' draggable={} visible={} active={}",
+                     ev.x,
+                     ev.y,
+                     picked->getId(),
+                     picked->isDraggable(),
+                     picked->isVisible(),
+                     picked->isActive());
+    }
+
     if (picked && picked->isDraggable()) {
         draggedObj_ = picked;
         dragOffset_ = picked->getPosition() - wp;
@@ -178,10 +318,10 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
         const auto b = picked->getGlobalBounds();
         chipHalfW_ = b.width / 2.F;
         chipHalfH_ = b.height / 2.F;
-        spdlog::debug("Controller: drag start '{}'", picked->getId());
+        spdlog::info("Controller: drag start '{}'", picked->getId());
         lua_.fireEvent(dice::scripting::kEventOnDragStart, draggedObj_.get());
     } else if (picked) {
-        spdlog::debug("Controller: click '{}'", picked->getId());
+        spdlog::info("Controller: click firing event on '{}'", picked->getId());
         lua_.fireEvent(dice::scripting::kEventOnClick, picked.get());
     }
 }
@@ -202,7 +342,6 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
         wasDragging_ = true;
     }
 
-    // Hover detection (работает независимо от drag)
     const auto objs = collectObjects();
     auto picked = view_.pickObject(wp, objs);
 
@@ -220,11 +359,14 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
 
 void Controller::onMouseReleased(const sf::Event::MouseButtonEvent& /*ev*/) {
     if (draggedObj_) {
+        spdlog::info("Controller: mouse released on '{}' wasDragging={}",
+                     draggedObj_->getId(),
+                     wasDragging_);
         if (!wasDragging_) {
-            spdlog::debug("Controller: click (on release) '{}'", draggedObj_->getId());
+            spdlog::info("Controller: click (on release) '{}'", draggedObj_->getId());
             lua_.fireEvent(dice::scripting::kEventOnClick, draggedObj_.get());
         } else {
-            spdlog::debug("Controller: drag end '{}'", draggedObj_->getId());
+            spdlog::info("Controller: drag end '{}'", draggedObj_->getId());
         }
         lua_.fireEvent(dice::scripting::kEventOnDragEnd, draggedObj_.get());
         draggedObj_ = nullptr;

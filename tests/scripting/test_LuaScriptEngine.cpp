@@ -233,3 +233,74 @@ TEST_F(LuaScriptEngineTest, FireEventNoScriptAttachedReturnsFalse) {
 TEST_F(LuaScriptEngineTest, FireEventNullObjectReturnsFalse) {
     EXPECT_FALSE(engine_.fireEvent("on_click", nullptr));
 }
+
+// ========== Trigger Catalog ==========
+
+TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
+    dice::scripting::LuaScriptEngine engine;
+
+    // Register a trigger named "roll_dice" that sets a global flag
+    engine.executeGlobalScriptFromSource(R"(
+        called = false
+        engine.trigger("roll_dice", function(obj)
+            called = true
+        end)
+    )");
+
+    // Create a GameObject with a trigger binding
+    auto obj = std::make_shared<dice::core::GameObject>("die1", "Die");
+    obj->setTriggerBinding("on_click", "roll_dice");
+
+    engine.fireEvent("on_click", obj.get());
+
+    // Verify trigger was called
+    const bool called = engine.getGlobalVariable<bool>("called");
+    EXPECT_TRUE(called);
+}
+
+// ========== Usertype bindings: setColor / hasTag / getTags ==========
+
+TEST(LuaScriptEngineBindings, SetColorDoesNotCrash) {
+    dice::scripting::LuaScriptEngine engine;
+    auto obj = std::make_shared<dice::core::GameObject>("obj1", "Object");
+
+    engine.executeGlobalScriptFromSource(R"(
+        engine.on("obj1", "on_click", function(self)
+            self:setColor(255, 0, 0, 255)
+        end)
+    )");
+    engine.fireEvent("on_click", obj.get());
+    SUCCEED();
+}
+
+TEST(LuaScriptEngineBindings, HasTagViaUsertype) {
+    dice::scripting::LuaScriptEngine engine;
+    auto obj = std::make_shared<dice::core::GameObject>("obj1", "Object");
+    obj->addTag("dice");
+
+    bool tagFound = false;
+    engine.registerFunction("cpp_check_tag", [&](bool v) { tagFound = v; });
+    engine.executeGlobalScriptFromSource(R"(
+        engine.on("obj1", "on_click", function(self)
+            cpp_check_tag(self:hasTag("dice"))
+        end)
+    )");
+    engine.fireEvent("on_click", obj.get());
+    EXPECT_TRUE(tagFound);
+}
+
+TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
+    dice::scripting::LuaScriptEngine engine;
+
+    engine.executeGlobalScriptFromSource(R"(
+        engine.trigger("my_trigger", function(obj) end)
+    )");
+
+    engine.clearSceneState();
+
+    // After clear, trigger should not fire (no crash, just returns false)
+    auto obj = std::make_shared<dice::core::GameObject>("obj1", "Card");
+    obj->setTriggerBinding("on_click", "my_trigger");
+    const bool fired = engine.fireEvent("on_click", obj.get());
+    EXPECT_FALSE(fired);
+}

@@ -37,12 +37,17 @@ public:
 
     void clear();
 
+    using UnregisterCallback = std::function<void(const std::string&)>;
+    void setUnregisterCallback(UnregisterCallback cb) {
+        unregisterCallback_ = std::move(cb);
+    }
+
 private:
     std::vector<std::shared_ptr<GameObject>> roots_;
     std::unordered_map<std::string, std::shared_ptr<GameObject>> objects_;
     std::shared_ptr<IObjectFactory> factory_;
+    UnregisterCallback unregisterCallback_;
 
-private:
     void registerRecursive(const std::shared_ptr<GameObject>& obj);
     void unregisterRecursive(const std::shared_ptr<GameObject>& obj);
 

@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "core/GameObject.hpp"
+#include "core/Model.hpp"
 #include "scripting/LuaScript.hpp"
 #include <spdlog/spdlog.h>
 
@@ -18,6 +19,17 @@ LuaScriptEngine::LuaScriptEngine() {
 
 void LuaScriptEngine::initLibraries() {
     lua_.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table);
+
+    lua_.set_exception_handler([](lua_State* l,
+                                  sol::optional<const std::exception&> maybe_exception,
+                                  sol::string_view description) {
+        if (maybe_exception) {
+            spdlog::error("Lua Exception: {}", maybe_exception->what());
+        } else {
+            spdlog::error("Lua Exception: {}", description);
+        }
+        return sol::stack::push(l, description);
+    });
 }
 
 void LuaScriptEngine::registerGameObjectType() {
@@ -86,7 +98,22 @@ void LuaScriptEngine::registerGameObjectType() {
         "setStringProperty",
         [](dice::core::GameObject& o, const std::string& k, const std::string& v) {
             o.setProperty<std::string>(k, v);
-        });
+        },
+        // цвет
+        "setColor",
+        [](dice::core::GameObject& o, int r, int g, int b, int a) {
+            o.setColor(sf::Color(static_cast<sf::Uint8>(r),
+                                 static_cast<sf::Uint8>(g),
+                                 static_cast<sf::Uint8>(b),
+                                 static_cast<sf::Uint8>(a)));
+        },
+        // теги
+        "hasTag",
+        [](const dice::core::GameObject& o, const std::string& tag) -> bool {
+            return o.hasTag(tag);
+        },
+        "getTags",
+        [](const dice::core::GameObject& o) -> std::vector<std::string> { return o.getTags(); });
 }
 
 void LuaScriptEngine::registerEngineTable() {
@@ -96,13 +123,21 @@ void LuaScriptEngine::registerEngineTable() {
         [this](const std::string& obj_id, const std::string& event, sol::protected_function fn) {
             inlineCallbacks_[obj_id][event] = std::move(fn);
         });
+    engine.set_function("trigger", [this](const std::string& name, sol::protected_function fn) {
+        triggerCatalog_[name] = std::move(fn);
+    });
+    engine.set_function("onKey", [this](const std::string& key_name, sol::protected_function fn) {
+        if (keyHandlers_.contains(key_name)) {
+            spdlog::warn("LuaScriptEngine: onKey '{}' handler overwritten", key_name);
+        }
+        keyHandlers_[key_name] = std::move(fn);
+    });
 }
 
 void LuaScriptEngine::registerStandardCallbacks() {
     lua_.set_function("cpp_log", [this](const std::string& message) {
         spdlog::info("[Lua] {}", message);
-        auto it = callbacks_.find("cpp_log");
-        if (it != callbacks_.end()) {
+        if (auto it = callbacks_.find("cpp_log"); it != callbacks_.end()) {
             it->second(message);
         }
     });
@@ -111,8 +146,7 @@ void LuaScriptEngine::registerStandardCallbacks() {
 void LuaScriptEngine::registerCallback(const std::string& name, UiCallback callback) {
     callbacks_[name] = std::move(callback);
     lua_.set_function(name, [this, name](const std::string& msg) {
-        auto it = callbacks_.find(name);
-        if (it != callbacks_.end()) {
+        if (auto it = callbacks_.find(name); it != callbacks_.end()) {
             it->second(msg);
         }
     });
@@ -124,8 +158,10 @@ sol::environment LuaScriptEngine::makeEnvironment() {
 }
 
 std::unique_ptr<LuaScript> LuaScriptEngine::createFromSource(const std::string& source) {
-    auto env = makeEnvironment();
-    return std::make_unique<LuaScript>(source, std::move(env), lua_);
+    if (auto env = makeEnvironment(); env) {
+        return std::make_unique<LuaScript>(source, std::move(env), lua_);
+    }
+    return nullptr;
 }
 
 std::unique_ptr<LuaScript> LuaScriptEngine::createFromFile(const std::filesystem::path& path) {
@@ -165,23 +201,48 @@ bool LuaScriptEngine::attachScript(dice::core::GameObject& obj, bool force_reloa
     return true;
 }
 
+bool LuaScriptEngine::fireBindingRef(const std::string& ref, dice::core::GameObject* obj) {
+    if (const auto sep = ref.find(':'); sep != std::string::npos) {
+        const std::string file = ref.substr(0, sep);
+        const std::string func = ref.substr(sep + 1);
+        sol::table mod = loadOrGetCachedModule(file);
+        if (!mod.valid()) {
+            return false;
+        }
+        const sol::protected_function fn = mod[func];
+        if (!fn.valid()) {
+            return false;
+        }
+        if (auto result = fn(obj); !result.valid()) {
+            const sol::error err = result;
+            spdlog::error("LuaScriptEngine: '{}' on '{}': {}", ref, obj->getId(), err.what());
+        }
+        return true;
+    }
+    if (auto tit = triggerCatalog_.find(ref); tit != triggerCatalog_.end()) {
+        if (auto result = tit->second(obj); !result.valid()) {
+            const sol::error err = result;
+            spdlog::error(
+                "LuaScriptEngine: trigger '{}' on '{}': {}", ref, obj->getId(), err.what());
+        }
+        return true;
+    }
+    return false;
+}
+
 bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameObject* obj) {
     if (obj == nullptr) {
         return false;
     }
     bool fired = false;
 
-    auto sit = scriptRegistry_.find(obj->getId());
-    if (sit != scriptRegistry_.end()) {
+    if (auto sit = scriptRegistry_.find(obj->getId()); sit != scriptRegistry_.end()) {
         fired |= sit->second->trigger(event_name, obj);
     }
 
-    auto cit = inlineCallbacks_.find(obj->getId());
-    if (cit != inlineCallbacks_.end()) {
-        auto eit = cit->second.find(event_name);
-        if (eit != cit->second.end()) {
-            auto result = eit->second(obj);
-            if (!result.valid()) {
+    if (auto cit = inlineCallbacks_.find(obj->getId()); cit != inlineCallbacks_.end()) {
+        if (auto eit = cit->second.find(event_name); eit != cit->second.end()) {
+            if (auto result = eit->second(obj); !result.valid()) {
                 const sol::error err = result;
                 spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
                               event_name,
@@ -192,7 +253,41 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
         }
     }
 
+    const auto& bindings = obj->getTriggerBindings();
+    if (auto bit = bindings.find(event_name); bit != bindings.end()) {
+        fired |= fireBindingRef(bit->second, obj);
+    }
+
     return fired;
+}
+
+sol::table LuaScriptEngine::loadOrGetCachedModule(const std::string& filepath) {
+    if (auto it = moduleCache_.find(filepath); it != moduleCache_.end()) {
+        return it->second;
+    }
+    auto result = lua_.script_file(filepath, sol::script_pass_on_error);
+    if (!result.valid()) {
+        const sol::error err = result;
+        spdlog::error("LuaScriptEngine: cannot load module '{}': {}", filepath, err.what());
+        return sol::lua_nil;
+    }
+    sol::table mod = result;
+    if (!mod.valid()) {
+        spdlog::error("LuaScriptEngine: module '{}' did not return a table", filepath);
+        return sol::lua_nil;
+    }
+    moduleCache_[filepath] = mod;
+    return mod;
+}
+
+bool LuaScriptEngine::executeGlobalScriptFromSource(const std::string& source) {
+    auto result = lua_.script(source, sol::script_pass_on_error);
+    if (!result.valid()) {
+        const sol::error err = result;
+        spdlog::error("LuaScriptEngine: script source error: {}", err.what());
+        return false;
+    }
+    return true;
 }
 
 bool LuaScriptEngine::executeGlobalScript(const std::filesystem::path& path) {
@@ -209,6 +304,92 @@ bool LuaScriptEngine::executeGlobalScript(const std::filesystem::path& path) {
 void LuaScriptEngine::detachScript(const std::string& object_id) {
     scriptRegistry_.erase(object_id);
     spdlog::debug("LuaScriptEngine: detached script from object '{}'", object_id);
+}
+
+void LuaScriptEngine::unregisterObject(const std::string& object_id) {
+    scriptRegistry_.erase(object_id);
+    inlineCallbacks_.erase(object_id);
+    spdlog::debug("LuaScriptEngine: unregistered object '{}'", object_id);
+}
+
+void LuaScriptEngine::loadPresets(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        spdlog::warn("LuaScriptEngine::loadPresets: cannot open '{}'", path.string());
+        return;
+    }
+    try {
+        loadPresetsFromJson(nlohmann::json::parse(file));
+    } catch (const nlohmann::json::exception& e) {
+        spdlog::error(
+            "LuaScriptEngine::loadPresets: parse error in '{}': {}", path.string(), e.what());
+    }
+}
+
+void LuaScriptEngine::loadPresetsFromJson(const nlohmann::json& j) {
+    const auto& presets = j.find("presets");
+    if (presets == j.end() || !presets->is_object()) {
+        return;
+    }
+    for (const auto& [name, bindings] : presets->items()) {
+        if (!bindings.is_object()) {
+            continue;
+        }
+        auto& catalog_entry = globalPresetCatalog_[name];
+        for (const auto& [event, ref] : bindings.items()) {
+            if (ref.is_string()) {
+                catalog_entry[event] = ref.get<std::string>();
+            }
+        }
+    }
+}
+
+void LuaScriptEngine::clearSceneState() {
+    scriptRegistry_.clear();
+    inlineCallbacks_.clear();
+    triggerCatalog_.clear();
+    keyHandlers_.clear();
+}
+
+void LuaScriptEngine::fireKeyEvent(const std::string& key_name) {
+    auto it = keyHandlers_.find(key_name);
+    if (it == keyHandlers_.end()) {
+        return;
+    }
+    if (auto result = it->second(); !result.valid()) {
+        const sol::error err = result;
+        spdlog::error("LuaScriptEngine: onKey '{}': {}", key_name, err.what());
+    }
+}
+
+void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
+                                          std::function<std::string()> get_current_path) {
+    sol::table engine = lua_["engine"];
+    if (!engine.valid()) {
+        spdlog::error("LuaScriptEngine::registerModelAccess: 'engine' table not found");
+        return;
+    }
+
+    engine.set_function("getObject",
+                        [&model](const std::string& id) { return model.getObject(id); });
+
+    engine.set_function("loadScene", [this](const std::string& path) {
+        if (sceneLoadCallback_) {
+            sceneLoadCallback_(path);
+        }
+    });
+
+    engine.set_function("reloadScene", [this, get_current_path = std::move(get_current_path)]() {
+        if (sceneLoadCallback_) {
+            if (auto path = get_current_path(); !path.empty()) {
+                sceneLoadCallback_(path);
+            }
+        }
+    });
+}
+
+void LuaScriptEngine::setSceneLoadCallback(std::function<void(const std::string&)> cb) {
+    sceneLoadCallback_ = std::move(cb);
 }
 
 } // namespace dice::scripting

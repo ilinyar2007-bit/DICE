@@ -9,7 +9,7 @@
 
 namespace dice::core {
 
-enum class MessageCode {
+enum class MessageCode : std::uint8_t {
 
     E_SCENE_ROOT_IS_NOT_AN_OBJECT,
     E_MISSING_OBJECTS_ARRAY,
@@ -50,6 +50,12 @@ enum class MessageCode {
     E_TAGS_VALUES_ARE_NOT_STRINGS,
 
     E_PROPERTIES_IS_NOT_AN_OBJECT,
+
+    E_SCRIPTS_IS_NOT_AN_ARRAY,
+    E_SCRIPTS_ENTRY_IS_NOT_A_STRING,
+    W_SCRIPT_FILE_NOT_FOUND,
+    E_TRIGGERS_IS_NOT_AN_OBJECT,
+    E_TRIGGER_VALUE_IS_NOT_A_STRING,
 
 };
 
@@ -112,6 +118,9 @@ private:
 
     void checkTags(const nlohmann::json& obj);
     void checkProperties(const nlohmann::json& obj);
+
+    void checkScripts(const nlohmann::json& scene_json);
+    void checkTriggers(const nlohmann::json& obj);
 
     [[nodiscard]] static std::optional<std::string> tryGetId(const nlohmann::json& obj) {
         if (!obj.contains("id")) {

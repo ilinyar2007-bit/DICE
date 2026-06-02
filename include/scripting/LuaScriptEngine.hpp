@@ -1,6 +1,7 @@
 #ifndef DICE_SCRIPTING_LUA_SCRIPT_ENGINE_HPP
 #define DICE_SCRIPTING_LUA_SCRIPT_ENGINE_HPP
 
+#include <concepts>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -12,6 +13,7 @@ extern "C" {
 #include <lua.h>
 #include <lualib.h>
 }
+#include <nlohmann/json.hpp>
 #include <sol/sol.hpp>
 
 #include <spdlog/spdlog.h>
@@ -19,6 +21,10 @@ extern "C" {
 namespace dice::core {
 class GameObject;
 } // namespace dice::core
+
+namespace dice::core {
+class Model;
+}
 
 #include "scripting/LuaScript.hpp"
 
@@ -44,7 +50,11 @@ public:
 
     bool fireEvent(const std::string& event_name, dice::core::GameObject* obj);
 
+    void fireKeyEvent(const std::string& key_name);
+
     void detachScript(const std::string& object_id);
+
+    void unregisterObject(const std::string& object_id);
 
     void registerCallback(const std::string& name, UiCallback callback);
 
@@ -54,10 +64,41 @@ public:
 
     bool executeGlobalScript(const std::filesystem::path& path);
 
+    bool executeGlobalScriptFromSource(const std::string& source);
+
+    void clearSceneState();
+
+    void loadPresets(const std::filesystem::path& path);
+    void loadPresetsFromJson(const nlohmann::json& j);
+
+    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>&
+    getGlobalPresetCatalog() const {
+        return globalPresetCatalog_;
+    }
+
+    void registerModelAccess(dice::core::Model& model,
+                             std::function<std::string()> get_current_path);
+    void setSceneLoadCallback(std::function<void(const std::string&)> cb);
+
+    template <typename T>
+    T getGlobalVariable(const std::string& name, const T& default_value = T()) {
+        auto val = lua_[name];
+        if (val.valid()) {
+            return val.get<T>();
+        }
+        return default_value;
+    }
+
+    bool hasGlobalVariable(const std::string& name) {
+        return lua_[name].valid();
+    }
+
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
-        sol::protected_function fn = lua_[name];
-        if (!fn.valid())
+        const sol::protected_function fn = lua_[name];
+        if (!fn.valid()) {
+            spdlog::warn("LuaScriptEngine::callGlobal: function '{}' not found", name);
             return;
+        }
         auto result = fn(std::forward<Args>(args)...);
         if (!result.valid()) {
             sol::error err = result;
@@ -71,12 +112,21 @@ private:
     std::unordered_map<std::string, UiCallback> callbacks_;
     std::unordered_map<std::string, std::unordered_map<std::string, sol::protected_function>>
         inlineCallbacks_;
+    std::unordered_map<std::string, sol::protected_function> triggerCatalog_;
+    std::unordered_map<std::string, sol::protected_function> keyHandlers_;
+    std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+        globalPresetCatalog_;
+    std::unordered_map<std::string, sol::table> moduleCache_;
+
+    std::function<void(const std::string&)> sceneLoadCallback_;
 
     void initLibraries();
     void registerGameObjectType();
     void registerStandardCallbacks();
     void registerEngineTable();
     sol::environment makeEnvironment();
+    sol::table loadOrGetCachedModule(const std::string& filepath);
+    bool fireBindingRef(const std::string& ref, dice::core::GameObject* obj);
 };
 
 } // namespace dice::scripting
