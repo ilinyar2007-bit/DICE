@@ -174,6 +174,30 @@ target_link_libraries(dice_controller
 )
 
 # ----------------------------
+# Network library
+# ----------------------------
+add_library(dice_network STATIC
+  src/network/NetworkMessage.cpp
+  src/network/HostServer.cpp
+  src/network/GameClient.cpp
+  src/network/NetworkManager.cpp
+)
+
+target_include_directories(dice_network
+  PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(dice_network
+  PUBLIC
+    dice_core
+    dice_scripting
+    sfml-network
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog
+)
+
+# ----------------------------
 # Application
 # ----------------------------
 add_executable(${PROJECT_NAME}

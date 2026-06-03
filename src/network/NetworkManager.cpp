@@ -172,21 +172,27 @@ void NetworkManager::sendEvent(const std::string& objectId,
             actionManager_.saveSnapshot(model_);
             lua_.fireEvent(eventName, obj.get());
             hostServer_->broadcast(NetworkMessage::createEvent(objectId, eventName));
-        } else if (gameClient_) {
-            gameClient_->sendEvent(objectId, eventName, callback);
-        } else {
-            auto obj = model_.getObject(objectId);
-            if (obj) {
-                actionManager_.saveSnapshot(model_);
-                lua_.fireEvent(eventName, obj.get());
-            }
+        }
+    } else if (gameClient_) {
+        gameClient_->sendEvent(objectId, eventName, callback);
+    } else {
+        auto obj = model_.getObject(objectId);
+        if (obj) {
+            actionManager_.saveSnapshot(model_);
+            lua_.fireEvent(eventName, obj.get());
         }
     }
+}
 }
 
 void NetworkManager::sendMoveObject(const std::string& objectId, float x, float y) {
     if (hostServer_) {
-        hostServer_->handleMoveObject(NetworkMessage::createMoveObject(objectId, x, y));
+        core::MoveObjectAction action(objectId, sf::Vector2f(x, y));
+        if (action.canExecute(model_)) {
+            actionManager_.saveSnapshot(model_);
+            action.execute(model_);
+            hostServer_->broadcast(NetworkMessage::createMoveObject(objectId, x, y));
+        }
     } else if (gameClient_) {
         gameClient_->sendMoveObject(objectId, x, y);
     } else {
