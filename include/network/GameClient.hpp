@@ -67,8 +67,8 @@ private:
     void handleMessage(const NetworkMessage& msg);
     void send(const NetworkMessage& msg);
 
-    void applyEvent(const std::string& objectId, const std::string& eventName);
-    void applyMoveObject(const std::string& objectId, float x, float y);
+    void applyEvent(const std::string& object_id, const std::string& event_name);
+    void applyMoveObject(const std::string& object_id, float x, float y);
     void applySnapshot(const nlohmann::json& state);
 
     sf::TcpSocket socket_;
