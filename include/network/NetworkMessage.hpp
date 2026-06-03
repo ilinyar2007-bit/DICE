@@ -24,10 +24,7 @@ enum class MessageType : uint8_t {
     StartGame,
 
     Snapshot,
-    Action,
-    ActionAck,
-    ActionReject,
-    LuaCall,
+    Event,
     MoveObject,
     Chat
 };
@@ -48,15 +45,6 @@ struct ClientInfo {
     }
 };
 
-struct PendingAction {
-    std::string actionId;
-    std::string functionName;
-    nlohmann::json params;
-    nlohmann::json predictedState;
-    std::chrono::steady_clock::time_point timestamp;
-    std::function<void(bool)> callback;
-};
-
 struct NetworkMessage {
     MessageType type = MessageType::Disconnect;
     uint32_t sequenceId = 0;
@@ -73,14 +61,7 @@ struct NetworkMessage {
     static NetworkMessage createPlayerReady(const std::string& playerId);
     static NetworkMessage createStartGame();
     static NetworkMessage createSnapshot(const nlohmann::json& state);
-    static NetworkMessage createAction(const std::string& actionId,
-                                       const std::string& functionName,
-                                       const nlohmann::json& params);
-    static NetworkMessage createActionAck(const std::string& actionId);
-    static NetworkMessage createActionReject(const std::string& actionId,
-                                             const std::string& reason);
-    static NetworkMessage createLuaCall(const std::string& functionName,
-                                        const nlohmann::json& params);
+    static NetworkMessage createEvent(const std::string& objectId, const std::string& eventName);
     static NetworkMessage createMoveObject(const std::string& objectId, float x, float y);
     static NetworkMessage createChat(const std::string& text);
     static NetworkMessage createPing();
@@ -94,7 +75,7 @@ struct NetworkMessage {
     std::string toString() const;
 };
 
-// constexpr const char* SCRIPTS_VERSION = "1.0.0";
+constexpr const char* SCRIPTS_VERSION = "1.0.0";
 
 } // namespace dice::network
 

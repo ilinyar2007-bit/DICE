@@ -73,39 +73,12 @@ NetworkMessage NetworkMessage::createSnapshot(const nlohmann::json& state) {
     return msg;
 }
 
-NetworkMessage NetworkMessage::createAction(const std::string& actionId,
-                                            const std::string& functionName,
-                                            const nlohmann::json& params) {
+NetworkMessage NetworkMessage::createEvent(const std::string& objectId,
+                                           const std::string& eventName) {
     NetworkMessage msg;
-    msg.type = MessageType::Action;
-    msg.data["actionId"] = actionId;
-    msg.data["function"] = functionName;
-    msg.data["params"] = params;
-    return msg;
-}
-
-NetworkMessage NetworkMessage::createActionAck(const std::string& actionId) {
-    NetworkMessage msg;
-    msg.type = MessageType::ActionAck;
-    msg.data["actionId"] = actionId;
-    return msg;
-}
-
-NetworkMessage NetworkMessage::createActionReject(const std::string& actionId,
-                                                  const std::string& reason) {
-    NetworkMessage msg;
-    msg.type = MessageType::ActionReject;
-    msg.data["actionId"] = actionId;
-    msg.data["reason"] = reason;
-    return msg;
-}
-
-NetworkMessage NetworkMessage::createLuaCall(const std::string& functionName,
-                                             const nlohmann::json& params) {
-    NetworkMessage msg;
-    msg.type = MessageType::LuaCall;
-    msg.data["function"] = functionName;
-    msg.data["params"] = params;
+    msg.type = MessageType::Event;
+    msg.data["object_id"] = objectId;
+    msg.data["event"] = eventName;
     return msg;
 }
 
@@ -206,17 +179,8 @@ std::string NetworkMessage::toString() const {
         case MessageType::Snapshot:
             str += "Snapshot";
             break;
-        case MessageType::Action:
-            str += "Action";
-            break;
-        case MessageType::ActionAck:
-            str += "ActionAck";
-            break;
-        case MessageType::ActionReject:
-            str += "ActionReject";
-            break;
-        case MessageType::LuaCall:
-            str += "LuaCall";
+        case MessageType::Event:
+            str += "Event";
             break;
         case MessageType::MoveObject:
             str += "MoveObject";

@@ -124,16 +124,13 @@ void HostServer::receiveFromClient(sf::TcpSocket& socket, const std::string& cli
         }
         switch (msg.type) {
             case MessageType::Handshake:
-                handleHandshake(msg, socket);
+                handleHandshake(msg);
                 break;
             case MessageType::PlayerReady:
                 handlePlayerReady(msg);
                 break;
-            case MessageType::Action:
-                handleAction(msg);
-                break;
-            case MessageType::LuaCall:
-                handleLuaCall(msg);
+            case MessageType::Event:
+                handleEvent(msg);
                 break;
             case MessageType::MoveObject:
                 handleMoveObject(msg);
@@ -153,7 +150,7 @@ void HostServer::receiveFromClient(sf::TcpSocket& socket, const std::string& cli
     }
 }
 
-void HostServer::handleHandshake(const NetworkMessage& msg, sf::TcpSocket& socket) {
+void HostServer::handleHandshake(const NetworkMessage& msg) {
     std::string playerName = msg.data.value("playerName", "Unknown");
     std::string clientVersion = msg.data.value("scriptsVersion", "");
 
@@ -214,103 +211,33 @@ void HostServer::handlePlayerReady(const NetworkMessage& msg) {
     }
 }
 
-void HostServer::handleAction(const NetworkMessage& msg) {
+void HostServer::handleEvent(const NetworkMessage& msg) {
     if (!gameStarted_) {
-        spdlog::warn("Action received but game not started");
-        auto reject = NetworkMessage::createActionReject(msg.data["actionId"], "Game not started");
-        sendToClient(msg.fromId, reject);
+        spdlog::warn("Event received but game not started");
         return;
     }
 
-    std::string actionId = msg.data.value("actionId", "");
-    std::string functionName = msg.data.value("function", "");
-    nlohmann::json params = msg.data.value("params", {});
+    std::string objectId = msg.data.value("object_id", "");
+    std::string eventName = msg.data.value("event", "");
 
-    spdlog::info("Action from {}: {}", msg.fromId, functionName);
-
-    if (!validateAction(functionName, params, msg.fromId)) {
-        spdlog::warn("Action rejected: {} from {}", functionName, msg.fromId);
-        auto reject = NetworkMessage::createActionReject(actionId, "Action not allowed");
-        sendToClient(msg.fromId, reject);
+    if (!isEventAllowedForClient(eventName, msg.fromId)) {
+        spdlog::warn("Client {} tried to call forbidden event: {}", msg.fromId, eventName);
         return;
     }
+
+    auto obj = model_.getObject(objectId);
+    if (!obj) {
+        spdlog::warn("Event target object not found: {}", objectId);
+        return;
+    }
+
+    spdlog::info("Event from {}: {} on {}", msg.fromId, eventName, objectId);
 
     actionManager_.saveSnapshot(model_);
 
-    try {
-        // TODO
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to execute action: {}", e.what());
-        auto reject = NetworkMessage::createActionReject(actionId, e.what());
-        sendToClient(msg.fromId, reject);
-        return;
-    }
-
-    auto ack = NetworkMessage::createActionAck(actionId);
-    sendToClient(msg.fromId, ack);
-
-    auto syncMsg = NetworkMessage::createLuaCall("sync" + functionName, params);
-    broadcast(syncMsg);
-
-    broadcastSnapshot();
-}
-
-void HostServer::handleLuaCall(const NetworkMessage& msg) {
-    if (!gameStarted_) {
-        spdlog::warn("Lua call received but game not started");
-        return;
-    }
-
-    std::string functionName = msg.data.value("function", "");
-
-    if (!isFunctionAllowedForClient(functionName)) {
-        spdlog::warn("Client {} tried to call forbidden function: {}", msg.fromId, functionName);
-        return;
-    }
-
-    nlohmann::json params = msg.data.value("params", {});
-
-    spdlog::info("Lua call from {}: {}", msg.fromId, functionName);
-
-    actionManager_.saveSnapshot(model_);
-
-    try {
-        // TODO
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to execute Lua call: {}", e.what());
-        return;
-    }
+    lua_.fireEvent(eventName, obj.get());
 
     broadcast(msg);
-}
-
-bool HostServer::validateAction(const std::string& functionName,
-                                const nlohmann::json& params,
-                                const std::string& clientId) {
-    if (!isFunctionAllowedForClient(functionName)) {
-        return false;
-    }
-
-    if (params.contains("card_id")) {
-        auto obj = model_.getObject(params["card_id"]);
-        if (!obj) {
-            return false;
-        }
-        // if (obj->getOwner() != clientId) { return false; }
-    }
-
-    if (params.contains("chip_id")) {
-        auto obj = model_.getObject(params["chip_id"]);
-        if (!obj) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool HostServer::isFunctionAllowedForClient(const std::string& functionName) {
-    return allowedClientFunctions_.count(functionName) > 0;
 }
 
 void HostServer::handleMoveObject(const NetworkMessage& msg) {
@@ -331,12 +258,8 @@ void HostServer::handleMoveObject(const NetworkMessage& msg) {
         actionManager_.saveSnapshot(model_);
         action.execute(model_);
         broadcast(msg);
-
-        if (onChatReceived_) {
-            onChatReceived_(msg.fromId, "moved " + objectId);
-        }
     } else {
-        spdlog::warn("MoveObject rejected: {} cannot be moved to ({}, {})", objectId, x, y);
+        spdlog::warn("MoveObject rejected: {} cannot be moved", objectId);
     }
 }
 
@@ -361,6 +284,11 @@ void HostServer::handlePing(const NetworkMessage& msg) {
     }
 }
 
+bool HostServer::isEventAllowedForClient(const std::string& eventName,
+                                         const std::string& clientId) {
+    return allowedEvents_.count(eventName) > 0;
+}
+
 void HostServer::sendToClient(const std::string& clientId, const NetworkMessage& msg) {
     std::lock_guard<std::mutex> lock(clientsMutex_);
     auto it = clients_.find(clientId);
@@ -371,10 +299,10 @@ void HostServer::sendToClient(const std::string& clientId, const NetworkMessage&
 }
 
 void HostServer::broadcast(const NetworkMessage& msg, const std::string& excludeId) {
+    auto data = msg.serialize();
     std::lock_guard<std::mutex> lock(clientsMutex_);
     for (const auto& [id, socket] : clients_) {
         if (id != excludeId) {
-            auto data = msg.serialize();
             socket->send(data.data(), data.size());
         }
     }

@@ -64,18 +64,14 @@ private:
     void checkTimeouts();
     void broadcastSnapshot();
 
-    void handleHandshake(const NetworkMessage& msg, sf::TcpSocket& socket);
+    void handleHandshake(const NetworkMessage& msg);
     void handlePlayerReady(const NetworkMessage& msg);
-    void handleAction(const NetworkMessage& msg);
-    void handleLuaCall(const NetworkMessage& msg);
+    void handleEvent(const NetworkMessage& msg);
     void handleMoveObject(const NetworkMessage& msg);
     void handleChat(const NetworkMessage& msg);
     void handlePing(const NetworkMessage& msg);
 
-    bool validateAction(const std::string& functionName,
-                        const nlohmann::json& params,
-                        const std::string& clientId);
-    bool isFunctionAllowedForClient(const std::string& functionName);
+    bool isEventAllowedForClient(const std::string& eventName, const std::string& clientId);
 
     std::string generateId();
 
@@ -100,13 +96,7 @@ private:
     float pingInterval_ = 5.0f;
     float timeoutInterval_ = 15.0f;
 
-    std::unordered_map<std::string, std::string> pendingActions_;
-
-    std::unordered_set<std::string> allowedClientFunctions_ = {
-        "flipCard",
-        "moveCard",
-        "rollDice",
-    };
+    std::unordered_set<std::string> allowedEvents_ = {"on_click", "on_drag_start", "on_drag_end"};
 
     std::function<void(const ClientInfo&)> onClientJoined_;
     std::function<void(const std::string&)> onClientLeft_;
