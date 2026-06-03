@@ -35,6 +35,9 @@ struct AppConfig {
     bool showObjectCount = true;
     bool showControls = true;
     bool resizable = true;
+
+    int luaMemoryLimitMb = 64;
+    int maxSceneObjects = 1000;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppConfig,
@@ -51,7 +54,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppConfig,
                                    showFPS,
                                    showObjectCount,
                                    showControls,
-                                   resizable)
+                                   resizable,
+                                   luaMemoryLimitMb,
+                                   maxSceneObjects)
 
 } // namespace dice
 

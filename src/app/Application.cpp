@@ -86,6 +86,7 @@ bool Application::init(const std::string& start_scene) {
     view_.setConfig(vcfg);
 
     // Lua Setup
+    lua_.setMemoryLimit(static_cast<size_t>(config_.luaMemoryLimitMb) * 1024ULL * 1024ULL);
     lua_.registerFunction("log", [](const std::string& msg) { spdlog::info("[Lua] {}", msg); });
 
     // Controller Setup
@@ -96,6 +97,7 @@ bool Application::init(const std::string& start_scene) {
         spdlog::warn("no fonts are available");
     }
     lua_.loadPresets("assets/presets.json");
+    controller_.setMaxSceneObjects(config_.maxSceneObjects);
     controller_.registerDefaultFunctions(mainFont);
 
     if (!controller_.loadScene(config_.startScene)) {

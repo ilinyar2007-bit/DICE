@@ -8,6 +8,8 @@
 
 namespace dice::core {
 
+SceneValidator::SceneValidator(std::size_t max_objects) : maxObjectCount_(max_objects) {}
+
 bool SceneValidator::validate(const nlohmann::json& scene_json,
                               const std::filesystem::path& scene_file_path) {
     clear();
@@ -92,9 +94,9 @@ void SceneValidator::checkObjectCount(const nlohmann::json& scene_json) {
         pending.pop_back();
 
         ++count;
-        if (count > kMaxObjectCount) {
+        if (count > maxObjectCount_) {
             addError(MessageCode::E_OBJECT_COUNT_LIMIT_EXCEEDED,
-                     "Scene object count exceeds limit of " + std::to_string(kMaxObjectCount),
+                     "Scene object count exceeds limit of " + std::to_string(maxObjectCount_),
                      scene_json);
             return;
         }

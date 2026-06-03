@@ -1,5 +1,6 @@
 #include "scripting/LuaScriptEngine.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -9,6 +10,29 @@
 #include <spdlog/spdlog.h>
 
 namespace dice::scripting {
+
+void* LuaScriptEngine::guardedAlloc(void* ud, void* ptr, size_t osize, size_t nsize) {
+    auto* g = static_cast<MemGuard*>(ud);
+    if (nsize == 0) {
+        g->used -= osize;
+        std::free(ptr);
+        return nullptr;
+    }
+    const size_t delta = nsize - (ptr ? osize : 0);
+    if (g->limit > 0 && g->used + delta > g->limit) {
+        return nullptr;
+    }
+    void* res = std::realloc(ptr, nsize);
+    if (res) {
+        g->used += delta;
+    }
+    return res;
+}
+
+void LuaScriptEngine::setMemoryLimit(size_t bytes) {
+    memGuard_.limit = bytes;
+    lua_setallocf(lua_.lua_state(), &LuaScriptEngine::guardedAlloc, &memGuard_);
+}
 
 LuaScriptEngine::LuaScriptEngine() {
     initLibraries();

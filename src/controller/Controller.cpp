@@ -95,7 +95,7 @@ bool Controller::loadScene(const std::filesystem::path& path) {
         return false;
     }
 
-    dice::core::SceneValidator validator;
+    dice::core::SceneValidator validator(static_cast<std::size_t>(maxSceneObjects_));
     if (!validator.validate(sceneJson, path)) {
         spdlog::error("Controller: scene '{}' failed validation", path.string());
         return false;

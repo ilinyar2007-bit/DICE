@@ -69,7 +69,7 @@ struct ValidationMessage {
 
 class SceneValidator {
 public:
-    static constexpr std::size_t kMaxObjectCount = 10000;
+    explicit SceneValidator(std::size_t max_objects = 1000);
 
     bool validate(const nlohmann::json& scene_json, const std::filesystem::path& scene_file_path);
 
@@ -90,6 +90,7 @@ public:
     }
 
 private:
+    std::size_t maxObjectCount_;
     std::vector<ValidationMessage> errors_;
     std::vector<ValidationMessage> warnings_;
     std::filesystem::path scene_directory_;

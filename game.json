@@ -12,6 +12,8 @@
     "showObjectCount": true,
     "showControls": true,
     "resizable": false,
+    "luaMemoryLimitMb": 64,
+    "maxSceneObjects": 1000,
     "fonts": [
         {
             "id": "default_font",
