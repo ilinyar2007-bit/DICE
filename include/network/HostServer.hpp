@@ -32,6 +32,9 @@ public:
     bool isRunning() const {
         return isRunning_;
     }
+    bool isGameStarted() const {
+        return gameStarted_;
+    }
 
     std::string getLocalIp() const;
     uint16_t getPort() const {
