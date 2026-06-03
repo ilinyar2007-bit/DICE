@@ -12,26 +12,28 @@ GameClient::~GameClient() {
     disconnect();
 }
 
-bool GameClient::connect(const std::string& hostIp, uint16_t port, const std::string& playerName) {
+bool GameClient::connect(const std::string& host_ip,
+                         uint16_t port,
+                         const std::string& player_name) {
     if (isConnected_) {
         spdlog::warn("Already connected");
         return false;
     }
 
-    spdlog::info("Connecting to {}:{} as {}", hostIp, port, playerName);
+    spdlog::info("Connecting to {}:{} as {}", host_ip, port, player_name);
 
-    sf::Socket::Status status = socket_.connect(hostIp, port);
+    sf::Socket::Status status = socket_.connect(host_ip, port);
     if (status != sf::Socket::Done) {
         spdlog::error("Failed to connect: {}", static_cast<int>(status));
         return false;
     }
 
     socket_.setBlocking(false);
-    serverIp_ = hostIp;
+    serverIp_ = host_ip;
     serverPort_ = port;
     isConnected_ = true;
 
-    auto handshake = NetworkMessage::createHandshake(playerName, SCRIPTS_VERSION);
+    auto handshake = NetworkMessage::createHandshake(player_name, SCRIPTS_VERSION);
     send(handshake);
 
     running_ = true;
@@ -71,8 +73,8 @@ void GameClient::receiveLoop() {
     std::vector<uint8_t> buffer(65536);
 
     while (running_ && isConnected_) {
-        std::size_t received;
-        sf::Socket::Status status = socket_.receive(buffer.data(), buffer.size(), received);
+        std::size_t received = 0;
+        const sf::Socket::Status status = socket_.receive(buffer.data(), buffer.size(), received);
 
         if (status == sf::Socket::Done) {
             buffer.resize(received);
@@ -142,24 +144,24 @@ void GameClient::handleMessage(const NetworkMessage& msg) {
             break;
 
         case MessageType::Event: {
-            std::string objectId = msg.data.value("object_id", "");
-            std::string eventName = msg.data.value("event", "");
+            const std::string objectId = msg.data.value("object_id", "");
+            const std::string eventName = msg.data.value("event", "");
             applyEvent(objectId, eventName);
             break;
         }
 
         case MessageType::MoveObject:
-            if (model_) {
-                std::string objectId = msg.data.value("objectId", "");
-                float x = msg.data.value("x", 0.0f);
-                float y = msg.data.value("y", 0.0f);
+            if (model_ != nullptr) {
+                const std::string objectId = msg.data.value("objectId", "");
+                const float x = msg.data.value("x", 0.0F);
+                const float y = msg.data.value("y", 0.0F);
                 applyMoveObject(objectId, x, y);
             }
             break;
 
         case MessageType::Chat:
             if (onChatReceived_) {
-                std::string text = msg.data.value("text", "");
+                const std::string text = msg.data.value("text", "");
                 onChatReceived_(msg.fromId, text);
             }
             break;
@@ -180,46 +182,46 @@ void GameClient::handleMessage(const NetworkMessage& msg) {
     }
 }
 
-void GameClient::sendEvent(const std::string& objectId, const std::string& eventName) {
+void GameClient::sendEvent(const std::string& object_id, const std::string& event_name) {
     if (!gameStarted_) {
         spdlog::warn("Cannot send event - game not started");
         return;
     }
 
-    auto msg = NetworkMessage::createEvent(objectId, eventName);
+    auto msg = NetworkMessage::createEvent(object_id, event_name);
     send(msg);
-    spdlog::debug("Sent event: {} on {}", eventName, objectId);
+    spdlog::debug("Sent event: {} on {}", event_name, object_id);
 }
 
-void GameClient::applyEvent(const std::string& objectId, const std::string& eventName) {
-    if (!lua_ || !model_) {
+void GameClient::applyEvent(const std::string& object_id, const std::string& event_name) {
+    if ((lua_ == nullptr) || (model_ == nullptr)) {
         return;
     }
-    auto obj = model_->getObject(objectId);
+    auto obj = model_->getObject(object_id);
     if (!obj) {
-        spdlog::warn("Cannot apply event - object not found: {}", objectId);
+        spdlog::warn("Cannot apply event - object not found: {}", object_id);
         return;
     }
 
-    spdlog::debug("Applying event: {} on {}", eventName, objectId);
+    spdlog::debug("Applying event: {} on {}", event_name, object_id);
 
-    lua_->fireEvent(eventName, obj.get());
+    lua_->fireEvent(event_name, obj.get());
 }
 
-void GameClient::applyMoveObject(const std::string& objectId, float x, float y) {
-    if (!model_) {
+void GameClient::applyMoveObject(const std::string& object_id, float x, float y) {
+    if (model_ == nullptr) {
         return;
     }
-    spdlog::debug("Applying move: {} to ({}, {})", objectId, x, y);
+    spdlog::debug("Applying move: {} to ({}, {})", object_id, x, y);
 
-    core::MoveObjectAction action(objectId, sf::Vector2f(x, y));
+    core::MoveObjectAction action(object_id, sf::Vector2f(x, y));
     if (action.canExecute(*model_)) {
         action.execute(*model_);
     }
 }
 
 void GameClient::applySnapshot(const nlohmann::json& state) {
-    if (!model_ || !actionManager_) {
+    if ((model_ == nullptr) || (actionManager_ == nullptr)) {
         return;
     }
     spdlog::debug("Applying snapshot");
@@ -228,15 +230,15 @@ void GameClient::applySnapshot(const nlohmann::json& state) {
     model_->fromJson(state);
 }
 
-void GameClient::sendMoveObject(const std::string& objectId, float x, float y) {
+void GameClient::sendMoveObject(const std::string& object_id, float x, float y) {
     if (!gameStarted_) {
         spdlog::warn("Cannot send move - game not started");
         return;
     }
 
-    auto msg = NetworkMessage::createMoveObject(objectId, x, y);
+    auto msg = NetworkMessage::createMoveObject(object_id, x, y);
     send(msg);
-    spdlog::debug("Sent move: {} to ({}, {})", objectId, x, y);
+    spdlog::debug("Sent move: {} to ({}, {})", object_id, x, y);
 }
 
 void GameClient::sendReady() {
@@ -262,7 +264,7 @@ void GameClient::update() {
     static auto lastPingTime = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
 
-    if (std::chrono::duration<float>(now - lastPingTime).count() > 5.0f) {
+    if (std::chrono::duration<float>(now - lastPingTime).count() > 5.0F) {
         auto ping = NetworkMessage::createPing();
         send(ping);
         lastPingTime = now;
@@ -270,32 +272,32 @@ void GameClient::update() {
 }
 
 void GameClient::setOnConnected(std::function<void(const std::string&)> handler) {
-    onConnected_ = handler;
+    onConnected_ = std::move(handler);
 }
 
 void GameClient::setOnDisconnected(std::function<void()> handler) {
-    onDisconnected_ = handler;
+    onDisconnected_ = std::move(handler);
 }
 
 void GameClient::setOnPlayerJoined(std::function<void(const ClientInfo&)> handler) {
-    onPlayerJoined_ = handler;
+    onPlayerJoined_ = std::move(handler);
 }
 
 void GameClient::setOnPlayerLeft(std::function<void(const std::string&)> handler) {
-    onPlayerLeft_ = handler;
+    onPlayerLeft_ = std::move(handler);
 }
 
 void GameClient::setOnPlayerReady(std::function<void(const std::string&)> handler) {
-    onPlayerReady_ = handler;
+    onPlayerReady_ = std::move(handler);
 }
 
 void GameClient::setOnGameStarted(std::function<void()> handler) {
-    onGameStarted_ = handler;
+    onGameStarted_ = std::move(handler);
 }
 
 void GameClient::setOnChatReceived(
     std::function<void(const std::string&, const std::string&)> handler) {
-    onChatReceived_ = handler;
+    onChatReceived_ = std::move(handler);
 }
 
 } // namespace dice::network

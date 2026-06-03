@@ -17,12 +17,12 @@ enum class NetworkRole { SinglePlayer, Host, Client };
 class NetworkManager {
 public:
     NetworkManager(core::Model& model,
-                   core::ActionManager& actionManager,
+                   core::ActionManager& action_manager,
                    scripting::LuaScriptEngine& lua);
     ~NetworkManager();
 
     bool startHost(uint16_t port);
-    bool joinGame(const std::string& hostIp, uint16_t port, const std::string& playerName);
+    bool joinGame(const std::string& host_ip, uint16_t port, const std::string& player_name);
     void leaveGame();
 
     NetworkRole getRole() const {
@@ -34,15 +34,13 @@ public:
         return role_ == NetworkRole::Host;
     }
 
-    void sendEvent(const std::string& objectId,
-                   const std::string& eventName,
-                   std::function<void(bool)> callback = nullptr);
-    void sendMoveObject(const std::string& objectId, float x, float y);
+    void sendEvent(const std::string& object_id, const std::string& event_name);
+    void sendMoveObject(const std::string& object_id, float x, float y);
     void sendReady();
     void sendChat(const std::string& text);
 
     void startGame();
-    void kickPlayer(const std::string& playerId);
+    void kickPlayer(const std::string& player_id);
 
     std::vector<ClientInfo> getPlayers() const;
 

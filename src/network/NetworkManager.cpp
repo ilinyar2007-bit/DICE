@@ -5,9 +5,9 @@
 namespace dice::network {
 
 NetworkManager::NetworkManager(core::Model& model,
-                               core::ActionManager& actionManager,
+                               core::ActionManager& action_manager,
                                scripting::LuaScriptEngine& lua)
-    : model_(model), actionManager_(actionManager), lua_(lua) {
+    : model_(model), actionManager_(action_manager), lua_(lua) {
     registerLuaBindings();
 }
 
@@ -63,9 +63,9 @@ bool NetworkManager::startHost(uint16_t port) {
     return true;
 }
 
-bool NetworkManager::joinGame(const std::string& hostIp,
+bool NetworkManager::joinGame(const std::string& host_ip,
                               uint16_t port,
-                              const std::string& playerName) {
+                              const std::string& player_name) {
     if (role_ != NetworkRole::SinglePlayer) {
         spdlog::warn("Cannot join game - already in game");
         return false;
@@ -78,7 +78,7 @@ bool NetworkManager::joinGame(const std::string& hostIp,
     gameClient_->setLuaEngine(&lua_);
 
     gameClient_->setOnConnected(
-        [this](const std::string& clientId) { spdlog::info("Connected as {}", clientId); });
+        [this](const std::string& client_id) { spdlog::info("Connected as {}", client_id); });
 
     gameClient_->setOnDisconnected([this]() {
         role_ = NetworkRole::SinglePlayer;
@@ -118,7 +118,7 @@ bool NetworkManager::joinGame(const std::string& hostIp,
         }
     });
 
-    if (!gameClient_->connect(hostIp, port, playerName)) {
+    if (!gameClient_->connect(host_ip, port, player_name)) {
         gameClient_.reset();
         return false;
     }
@@ -163,40 +163,37 @@ bool NetworkManager::isGameStarted() const {
     return false;
 }
 
-void NetworkManager::sendEvent(const std::string& objectId,
-                               const std::string& eventName,
-                               std::function<void(bool)> callback) {
+void NetworkManager::sendEvent(const std::string& object_id, const std::string& event_name) {
     if (hostServer_) {
-        auto obj = model_.getObject(objectId);
+        auto obj = model_.getObject(object_id);
         if (obj) {
             actionManager_.saveSnapshot(model_);
-            lua_.fireEvent(eventName, obj.get());
-            hostServer_->broadcast(NetworkMessage::createEvent(objectId, eventName));
+            lua_.fireEvent(event_name, obj.get());
+            hostServer_->broadcastEvent(object_id, event_name);
         }
     } else if (gameClient_) {
-        gameClient_->sendEvent(objectId, eventName, callback);
+        gameClient_->sendEvent(object_id, event_name);
     } else {
-        auto obj = model_.getObject(objectId);
+        auto obj = model_.getObject(object_id);
         if (obj) {
             actionManager_.saveSnapshot(model_);
-            lua_.fireEvent(eventName, obj.get());
+            lua_.fireEvent(event_name, obj.get());
         }
     }
 }
-}
 
-void NetworkManager::sendMoveObject(const std::string& objectId, float x, float y) {
+void NetworkManager::sendMoveObject(const std::string& object_id, float x, float y) {
     if (hostServer_) {
-        core::MoveObjectAction action(objectId, sf::Vector2f(x, y));
+        core::MoveObjectAction action(object_id, sf::Vector2f(x, y));
         if (action.canExecute(model_)) {
             actionManager_.saveSnapshot(model_);
             action.execute(model_);
-            hostServer_->broadcast(NetworkMessage::createMoveObject(objectId, x, y));
+            hostServer_->broadcastMoveObject(object_id, x, y);
         }
     } else if (gameClient_) {
-        gameClient_->sendMoveObject(objectId, x, y);
+        gameClient_->sendMoveObject(object_id, x, y);
     } else {
-        core::MoveObjectAction action(objectId, sf::Vector2f(x, y));
+        core::MoveObjectAction action(object_id, sf::Vector2f(x, y));
         if (action.canExecute(model_)) {
             actionManager_.saveSnapshot(model_);
             action.execute(model_);
@@ -224,9 +221,9 @@ void NetworkManager::startGame() {
     }
 }
 
-void NetworkManager::kickPlayer(const std::string& playerId) {
+void NetworkManager::kickPlayer(const std::string& player_id) {
     if (hostServer_) {
-        hostServer_->kickClient(playerId);
+        hostServer_->kickClient(player_id);
     }
 }
 
@@ -250,31 +247,31 @@ void NetworkManager::registerLuaBindings() {
     lua_.registerFunction("is_host", [this]() { return isHost(); });
     lua_.registerFunction("is_client", [this]() { return !isHost() && isConnected(); });
     lua_.registerFunction("send_event", [this](const std::string& id, const std::string& event) {
-        sendEvent(id, event, nullptr);
+        sendEvent(id, event);
     });
     lua_.registerFunction(
         "send_move", [this](const std::string& id, float x, float y) { sendMoveObject(id, x, y); });
 }
 
 void NetworkManager::setOnPlayerJoined(std::function<void(const ClientInfo&)> handler) {
-    onPlayerJoined_ = handler;
+    onPlayerJoined_ = std::move(handler);
 }
 
 void NetworkManager::setOnPlayerLeft(std::function<void(const std::string&)> handler) {
-    onPlayerLeft_ = handler;
+    onPlayerLeft_ = std::move(handler);
 }
 
 void NetworkManager::setOnPlayerReady(std::function<void(const std::string&)> handler) {
-    onPlayerReady_ = handler;
+    onPlayerReady_ = std::move(handler);
 }
 
 void NetworkManager::setOnGameStarted(std::function<void()> handler) {
-    onGameStarted_ = handler;
+    onGameStarted_ = std::move(handler);
 }
 
 void NetworkManager::setOnChatReceived(
     std::function<void(const std::string&, const std::string&)> handler) {
-    onChatReceived_ = handler;
+    onChatReceived_ = std::move(handler);
 }
 
 } // namespace dice::network

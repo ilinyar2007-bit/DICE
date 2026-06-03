@@ -55,20 +55,20 @@ struct NetworkMessage {
     std::vector<uint8_t> serialize() const;
     static NetworkMessage deserialize(const std::vector<uint8_t>& data);
 
-    static NetworkMessage createHandshake(const std::string& playerName,
-                                          const std::string& scriptsVersion);
-    static NetworkMessage createHandshakeAck(const std::string& clientId, bool gameStarted);
-    static NetworkMessage createPlayerReady(const std::string& playerId);
+    static NetworkMessage createHandshake(const std::string& player_name,
+                                          const std::string& scripts_version);
+    static NetworkMessage createHandshakeAck(const std::string& client_id, bool game_started);
+    static NetworkMessage createPlayerReady(const std::string& player_id);
     static NetworkMessage createStartGame();
     static NetworkMessage createSnapshot(const nlohmann::json& state);
-    static NetworkMessage createEvent(const std::string& objectId, const std::string& eventName);
-    static NetworkMessage createMoveObject(const std::string& objectId, float x, float y);
+    static NetworkMessage createEvent(const std::string& object_id, const std::string& event_name);
+    static NetworkMessage createMoveObject(const std::string& object_id, float x, float y);
     static NetworkMessage createChat(const std::string& text);
     static NetworkMessage createPing();
     static NetworkMessage createPong();
-    static NetworkMessage createPlayerJoined(const std::string& playerId,
-                                             const std::string& playerName);
-    static NetworkMessage createPlayerLeft(const std::string& playerId);
+    static NetworkMessage createPlayerJoined(const std::string& player_id,
+                                             const std::string& player_name);
+    static NetworkMessage createPlayerLeft(const std::string& player_id);
     static NetworkMessage createDisconnect(const std::string& reason = "");
 
     bool isValid() const;

@@ -23,7 +23,7 @@ namespace dice::network {
 class HostServer {
 public:
     HostServer(core::Model& model,
-               core::ActionManager& actionManager,
+               core::ActionManager& action_manager,
                scripting::LuaScriptEngine& lua);
     ~HostServer();
 
@@ -36,7 +36,7 @@ public:
         return gameStarted_;
     }
 
-    std::string getLocalIp() const;
+    static std::string getLocalIp();
     uint16_t getPort() const {
         return port_;
     }
@@ -46,8 +46,11 @@ public:
     }
 
     void startGame();
-    void kickClient(const std::string& clientId);
+    void kickClient(const std::string& client_id);
     void sendChat(const std::string& text);
+
+    void broadcastMoveObject(const std::string& object_id, float x, float y);
+    void broadcastEvent(const std::string& object_id, const std::string& event_name);
 
     void update();
 
@@ -60,10 +63,10 @@ public:
 private:
     void serverLoop();
     void acceptNewClients();
-    void receiveFromClient(sf::TcpSocket& socket, const std::string& clientId);
-    void sendToClient(const std::string& clientId, const NetworkMessage& msg);
-    void broadcast(const NetworkMessage& msg, const std::string& excludeId = "");
-    void removeClient(const std::string& clientId);
+    void receiveFromClient(sf::TcpSocket& socket, const std::string& client_id);
+    void sendToClient(const std::string& client_id, const NetworkMessage& msg);
+    void broadcast(const NetworkMessage& msg, const std::string& exclude_id = "");
+    void removeClient(const std::string& client_id);
     void checkTimeouts();
     void broadcastSnapshot();
 
@@ -74,9 +77,9 @@ private:
     void handleChat(const NetworkMessage& msg);
     void handlePing(const NetworkMessage& msg);
 
-    bool isEventAllowedForClient(const std::string& eventName, const std::string& clientId);
+    bool isEventAllowedForClient(const std::string& event_name);
 
-    std::string generateId();
+    static std::string generateId();
 
     core::Model& model_;
     core::ActionManager& actionManager_;

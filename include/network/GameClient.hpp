@@ -23,7 +23,7 @@ public:
     GameClient();
     ~GameClient();
 
-    bool connect(const std::string& hostIp, uint16_t port, const std::string& playerName);
+    bool connect(const std::string& host_ip, uint16_t port, const std::string& player_name);
     void disconnect();
     bool isConnected() const {
         return isConnected_;
@@ -36,8 +36,8 @@ public:
         return clientId_;
     }
 
-    void sendEvent(const std::string& objectId, const std::string& eventName);
-    void sendMoveObject(const std::string& objectId, float x, float y);
+    void sendEvent(const std::string& object_id, const std::string& event_name);
+    void sendMoveObject(const std::string& object_id, float x, float y);
     void sendReady();
     void sendChat(const std::string& text);
 
