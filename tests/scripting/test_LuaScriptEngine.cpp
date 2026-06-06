@@ -308,7 +308,7 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
 // ========== Memory limit ==========
 
 TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
-    engine_.setMemoryLimit(1 * 1024 * 1024); // 1 MB
+    engine_.setMemoryLimit(size_t{1} * 1024 * 1024); // 1 MB
     const std::string src = R"(
         local t = {}
         for i = 1, 10000000 do t[i] = i end
@@ -317,6 +317,6 @@ TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
 }
 
 TEST_F(LuaScriptEngineTest, MemoryLimitAllowsNormalScript) {
-    engine_.setMemoryLimit(64 * 1024 * 1024); // 64 MB
+    engine_.setMemoryLimit(size_t{64} * 1024 * 1024); // 64 MB
     EXPECT_TRUE(engine_.executeGlobalScriptFromSource("local x = 42"));
 }

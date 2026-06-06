@@ -15,15 +15,16 @@ void* LuaScriptEngine::guardedAlloc(void* ud, void* ptr, size_t osize, size_t ns
     auto* g = static_cast<MemGuard*>(ud);
     if (nsize == 0) {
         g->used -= osize;
-        std::free(ptr);
+        std::free(ptr); // NOLINT(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)
         return nullptr;
     }
-    const size_t delta = nsize - (ptr ? osize : 0);
+    const size_t delta = nsize - ((ptr != nullptr) ? osize : 0);
     if (g->limit > 0 && g->used + delta > g->limit) {
         return nullptr;
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)
     void* res = std::realloc(ptr, nsize);
-    if (res) {
+    if (res != nullptr) {
         g->used += delta;
     }
     return res;
