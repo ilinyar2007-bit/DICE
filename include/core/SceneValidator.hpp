@@ -1,6 +1,7 @@
 #ifndef DICE_SCENE_VALIDATOR_HPP
 #define DICE_SCENE_VALIDATOR_HPP
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -56,6 +57,7 @@ enum class MessageCode : std::uint8_t {
     W_SCRIPT_FILE_NOT_FOUND,
     E_TRIGGERS_IS_NOT_AN_OBJECT,
     E_TRIGGER_VALUE_IS_NOT_A_STRING,
+    E_OBJECT_COUNT_LIMIT_EXCEEDED,
 
 };
 
@@ -67,6 +69,8 @@ struct ValidationMessage {
 
 class SceneValidator {
 public:
+    explicit SceneValidator(std::size_t max_objects = 1000);
+
     bool validate(const nlohmann::json& scene_json, const std::filesystem::path& scene_file_path);
 
     [[nodiscard]] const std::vector<ValidationMessage>& errors() const {
@@ -86,6 +90,7 @@ public:
     }
 
 private:
+    std::size_t maxObjectCount_;
     std::vector<ValidationMessage> errors_;
     std::vector<ValidationMessage> warnings_;
     std::filesystem::path scene_directory_;
@@ -105,6 +110,7 @@ private:
 
     void checkSceneRoot(const nlohmann::json& scene_json);
 
+    void checkObjectCount(const nlohmann::json& scene_json);
     void checkObject(const nlohmann::json& obj);
 
     void checkRequiredFields(const nlohmann::json& obj);

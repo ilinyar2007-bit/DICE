@@ -71,7 +71,8 @@ public:
     void loadPresets(const std::filesystem::path& path);
     void loadPresetsFromJson(const nlohmann::json& j);
 
-    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>&
+    [[nodiscard]] const std::unordered_map<std::string,
+                                           std::unordered_map<std::string, std::string>>&
     getGlobalPresetCatalog() const {
         return globalPresetCatalog_;
     }
@@ -94,19 +95,31 @@ public:
     }
 
     template <typename... Args> void callGlobal(const std::string& name, Args&&... args) {
-        const sol::protected_function fn = lua_[name];
+        const sol::protected_function fn{lua_[name]};
         if (!fn.valid()) {
             spdlog::warn("LuaScriptEngine::callGlobal: function '{}' not found", name);
             return;
         }
         auto result = fn(std::forward<Args>(args)...);
         if (!result.valid()) {
-            sol::error err = result;
+            const sol::error err{result};
             spdlog::error("LuaScriptEngine::callGlobal '{}': {}", name, err.what());
         }
     }
 
+    void setMemoryLimit(size_t bytes);
+    [[nodiscard]] size_t getMemoryUsed() const {
+        return memGuard_.used;
+    }
+
 private:
+    struct MemGuard {
+        size_t used = 0;
+        size_t limit = 0;
+    };
+    static void* guardedAlloc(void* ud, void* ptr, size_t osize, size_t nsize);
+
+    MemGuard memGuard_;
     sol::state lua_;
     std::unordered_map<std::string, std::unique_ptr<LuaScript>> scriptRegistry_;
     std::unordered_map<std::string, UiCallback> callbacks_;

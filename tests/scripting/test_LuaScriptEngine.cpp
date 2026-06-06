@@ -304,3 +304,19 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
     const bool fired = engine.fireEvent("on_click", obj.get());
     EXPECT_FALSE(fired);
 }
+
+// ========== Memory limit ==========
+
+TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
+    engine_.setMemoryLimit(size_t{1} * 1024 * 1024); // 1 MB
+    const std::string src = R"(
+        local t = {}
+        for i = 1, 10000000 do t[i] = i end
+    )";
+    EXPECT_FALSE(engine_.executeGlobalScriptFromSource(src));
+}
+
+TEST_F(LuaScriptEngineTest, MemoryLimitAllowsNormalScript) {
+    engine_.setMemoryLimit(size_t{64} * 1024 * 1024); // 64 MB
+    EXPECT_TRUE(engine_.executeGlobalScriptFromSource("local x = 42"));
+}

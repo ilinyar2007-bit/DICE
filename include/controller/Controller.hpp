@@ -33,6 +33,10 @@ public:
 
     [[nodiscard]] bool loadScene(const std::filesystem::path& path);
 
+    void setMaxSceneObjects(int n) {
+        maxSceneObjects_ = n;
+    }
+
     void registerDefaultFunctions(const sf::Font* font);
 
     void handleEvent(const sf::Event& event);
@@ -53,6 +57,7 @@ private:
     sf::RenderWindow& window_;
     dice::core::ResourceManager<sf::Texture>& textures_;
 
+    int maxSceneObjects_ = 1000;
     std::filesystem::path currentScenePath_;
     std::filesystem::path pendingScenePath_;
 

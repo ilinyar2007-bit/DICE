@@ -16,8 +16,8 @@ Application::~Application() {
     shutdown();
 }
 
-void Application::run() {
-    if (!init()) {
+void Application::run(const std::string& start_scene) {
+    if (!init(start_scene)) {
         spdlog::critical("Failed to initialize application");
         return;
     }
@@ -39,8 +39,11 @@ void Application::run() {
     spdlog::info("=== DICE Application Stopped ===");
 }
 
-bool Application::init() {
+bool Application::init(const std::string& start_scene) {
     config_ = loadConfig("game.json");
+    if (!start_scene.empty()) {
+        config_.startScene = start_scene;
+    }
 
     // Window Setup
     const sf::Uint32 style =
@@ -83,6 +86,7 @@ bool Application::init() {
     view_.setConfig(vcfg);
 
     // Lua Setup
+    lua_.setMemoryLimit(static_cast<size_t>(config_.luaMemoryLimitMb) * 1024ULL * 1024ULL);
     lua_.registerFunction("log", [](const std::string& msg) { spdlog::info("[Lua] {}", msg); });
 
     // Controller Setup
@@ -93,6 +97,7 @@ bool Application::init() {
         spdlog::warn("no fonts are available");
     }
     lua_.loadPresets("assets/presets.json");
+    controller_.setMaxSceneObjects(config_.maxSceneObjects);
     controller_.registerDefaultFunctions(mainFont);
 
     if (!controller_.loadScene(config_.startScene)) {
