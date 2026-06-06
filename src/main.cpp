@@ -1,12 +1,17 @@
 #include "app/Application.hpp"
 #include <spdlog/spdlog.h>
 
-int main() {
+int main(int argc, char* argv[]) {
     spdlog::set_level(spdlog::level::info);
+
+    std::string startScene;
+    if (argc > 1) {
+        startScene = argv[1];
+    }
 
     try {
         dice::Application app;
-        app.run();
+        app.run(startScene);
     } catch (const std::exception& e) {
         spdlog::critical("Unhandled exception: {}", e.what());
         return 1;

@@ -16,8 +16,8 @@ Application::~Application() {
     shutdown();
 }
 
-void Application::run() {
-    if (!init()) {
+void Application::run(const std::string& startScene) {
+    if (!init(startScene)) {
         spdlog::critical("Failed to initialize application");
         return;
     }
@@ -39,8 +39,11 @@ void Application::run() {
     spdlog::info("=== DICE Application Stopped ===");
 }
 
-bool Application::init() {
+bool Application::init(const std::string& startScene) {
     config_ = loadConfig("game.json");
+    if (!startScene.empty()) {
+        config_.startScene = startScene;
+    }
 
     // Window Setup
     const sf::Uint32 style =

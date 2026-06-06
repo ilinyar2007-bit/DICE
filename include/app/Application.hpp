@@ -25,10 +25,10 @@ public:
     Application(Application&&) = delete;
     Application& operator=(Application&&) = delete;
 
-    void run();
+    void run(const std::string& startScene = {});
 
 private:
-    bool init();
+    bool init(const std::string& startScene);
     void handleEvents();
     void update(float dt);
     void render();
