@@ -6,6 +6,7 @@ int main(int argc, char* argv[]) {
 
     std::string startScene;
     if (argc > 1) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         startScene = argv[1];
     }
 
