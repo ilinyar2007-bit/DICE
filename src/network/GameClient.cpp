@@ -257,7 +257,12 @@ void GameClient::send(const NetworkMessage& msg) {
         return;
     }
     auto data = msg.serialize();
-    socket_.send(data.data(), data.size());
+    auto status = socket_.send(data.data(), data.size());
+
+    if (status != sf::Socket::Done) {
+        spdlog::warn("Failed to send to server, status: {}", static_cast<int>(status));
+        disconnect();
+    }
 }
 
 void GameClient::update() {

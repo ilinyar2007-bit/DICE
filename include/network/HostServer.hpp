@@ -1,6 +1,7 @@
 #ifndef DICE_NETWORK_HOST_SERVER_HPP
 #define DICE_NETWORK_HOST_SERVER_HPP
 
+#include <atomic>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -90,8 +91,8 @@ private:
     std::unordered_map<std::string, ClientInfo> clientInfos_;
 
     uint16_t port_ = 0;
-    bool isRunning_ = false;
-    bool gameStarted_ = false;
+    std::atomic<bool> isRunning_{false};
+    std::atomic<bool> gameStarted_{false};
 
     std::thread serverThread_;
     mutable std::mutex clientsMutex_;
