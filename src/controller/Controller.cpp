@@ -290,7 +290,7 @@ void Controller::update(float dt) {
         }
         return;
     }
-    lua_.callGlobal("update", dt);
+    lua_.callGlobalIfExists("update", dt);
     view_.update(dt);
 }
 
@@ -321,6 +321,7 @@ void Controller::onMousePressed(const sf::Event::MouseButtonEvent& ev) {
     if (picked && picked->isDraggable()) {
         draggedObj_ = picked;
         dragOffset_ = picked->getPosition() - wp;
+        dragStartPos_ = wp;
         wasDragging_ = false;
         const auto b = picked->getGlobalBounds();
         chipHalfW_ = b.width / 2.F;
@@ -337,6 +338,11 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
     const auto wp = view_.screenToWorld({ev.x, ev.y});
 
     if (draggedObj_) {
+        const sf::Vector2f delta = wp - dragStartPos_;
+        if (!wasDragging_ && std::sqrt(delta.x * delta.x + delta.y * delta.y) < kDragThreshold) {
+            return;
+        }
+        wasDragging_ = true;
         sf::Vector2f newPos = wp + dragOffset_;
         newPos.x = std::clamp(newPos.x,
                               fieldBounds_.left + chipHalfW_,
@@ -346,7 +352,6 @@ void Controller::onMouseMoved(const sf::Event::MouseMoveEvent& ev) {
                               fieldBounds_.top + fieldBounds_.height - chipHalfH_);
         draggedObj_->setPosition(newPos.x, newPos.y);
         lua_.fireEvent(dice::scripting::kEventOnMove, draggedObj_.get());
-        wasDragging_ = true;
     }
 
     const auto objs = collectObjects();
@@ -381,6 +386,10 @@ void Controller::onMouseReleased(const sf::Event::MouseButtonEvent& /*ev*/) {
 }
 
 void Controller::refreshFieldBounds() {
+    fieldBounds_ = sf::FloatRect(0.F,
+                                 0.F,
+                                 static_cast<float>(window_.getSize().x),
+                                 static_cast<float>(window_.getSize().y));
     if (auto board = model_.getObject("board")) {
         fieldBounds_ = board->getGlobalBounds();
     }

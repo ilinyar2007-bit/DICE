@@ -133,7 +133,7 @@ void Application::render() {
     auto objects = controller_.collectObjects();
     view_.render(objects);
 
-    lua_.callGlobal("draw");
+    lua_.callGlobalIfExists("draw");
 
     window_.display();
 }

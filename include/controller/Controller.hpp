@@ -63,7 +63,9 @@ private:
 
     std::shared_ptr<dice::core::GameObject> draggedObj_;
     sf::Vector2f dragOffset_;
+    sf::Vector2f dragStartPos_;
     bool wasDragging_{false};
+    static constexpr float kDragThreshold{5.F};
     float chipHalfW_{0.F};
     float chipHalfH_{0.F};
 
