@@ -11,7 +11,7 @@
     {
       "type": "GameObject",
       "id": "btn",
-      "name": "Перейти к нардам",
+      "name": "Другая сцена",
       "position": [400, 300],
       "scale": [3.0, 0.6],
       "textureFile": "assets/button.png",

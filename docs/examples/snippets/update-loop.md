@@ -1,7 +1,5 @@
 # Update-цикл (анимация)
 
-> Демонстрирует: `lua`, `update(dt)`, `setPosition`
-
 ![](../gifs/update-loop.gif)
 
 ## Сцена (JSON)

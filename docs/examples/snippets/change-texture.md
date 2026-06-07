@@ -1,6 +1,6 @@
 # Смена текстуры из Lua
 
-> Демонстрирует: `lua`, `cpp_set_obj_texture`
+![](../gifs/change-texture.gif)
 
 ## Сцена (JSON)
 

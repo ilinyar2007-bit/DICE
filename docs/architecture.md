@@ -80,11 +80,9 @@ sequenceDiagram
     C->>M: fromJson(json)
     C->>L: getGlobalPresetCatalog()
     C->>M: forEachDepthFirst → mergePresetsIntoObject()
-    loop каждый объект с textureFile
-        C->>R: load(path)
-    end
-    loop каждый объект с luaScript
-        C->>L: attachScript(obj)
+    loop каждый объект (один проход forEachDepthFirst)
+        C->>R: load(textureFile), если есть
+        C->>L: attachScript(obj), если есть luaScript
     end
 ```
 
@@ -188,8 +186,8 @@ sequenceDiagram
 | `on_click` | Левая кнопка мыши: для не-draggable — при нажатии; для draggable — при отпускании без перетаскивания |
 | `on_hover` | Курсор вошёл в bounds объекта |
 | `on_hover_exit` | Курсор вышел из bounds объекта |
-| `on_drag_start` | Начало перетаскивания (`draggable: true`) |
-| `on_drag_end` | Конец перетаскивания |
+| `on_drag_start` | Нажатие ЛКМ на draggable-объект (срабатывает сразу при нажатии, до любого движения) |
+| `on_drag_end` | Отпускание ЛКМ с draggable-объекта — срабатывает всегда, в том числе при обычном клике без перемещения |
 | `on_move` | Позиция объекта изменилась в процессе drag |
 
 ---
@@ -209,7 +207,7 @@ sequenceDiagram
 | `resizable` | bool | `true` | Разрешить изменение размера окна |
 | `clearR` / `clearG` / `clearB` | int | `30/30/40` | Цвет фона (0–255) |
 | `startScene` | string | `"scenes/demo.json"` | Путь к начальной сцене |
-| `globalScript` | string | `""` | Путь к глобальному Lua-скрипту, загружаемому до сцены |
+| `globalScript` | string | `""` | ⚠️ Поле парсится, но не используется — функциональность не реализована |
 | `fonts` | array | `[]` | `[{id, path}]` — список шрифтов |
 | `showFPS` | bool | `true` | Оверлей счётчика FPS |
 | `showObjectCount` | bool | `true` | Оверлей числа объектов |

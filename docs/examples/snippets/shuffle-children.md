@@ -1,6 +1,6 @@
 # Перемешать дочерние объекты
 
-![](../gifs/shuffle_children.gif)
+![](../gifs/shuffle-children.gif)
 
 ## Сцена (JSON)
 
