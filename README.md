@@ -53,6 +53,11 @@ DICE - это комплексный инструмент разработки �
 [![sol2](https://img.shields.io/badge/sol2-Lua%20Bindings-000000?style=for-the-badge&logo=lua)](https://sol2.readthedocs.io/)
 
 
+## Документация
+
+- [Архитектура проекта](docs/architecture.md) — обзор модулей, жизненный цикл объектов, Lua-интеграция
+- [Примеры и сниппеты](docs/examples/README.md) — готовые игры и изолированные примеры с кодом
+
 ## Установка на Linux
 
 1. Склонируйте репозиторий
