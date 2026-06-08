@@ -217,7 +217,7 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
         return static_cast<int>(obj->getChildren().size());
     });
 
-    lua_.registerFunction("cpp_shuffle", [](sol::table t) { shuffleLuaTable(t); });
+    lua_.registerFunction("cpp_shuffle", [](sol::table t) { shuffleLuaTable(std::move(t)); });
 
     auto makeText = [font](const std::string& str, float size, int r, int g, int b) {
         sf::Text t;
