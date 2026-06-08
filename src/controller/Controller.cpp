@@ -8,6 +8,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "components/Deck.hpp"
+#include "components/Dice.hpp"
 #include "core/SceneValidator.hpp"
 #include "scripting/LuaScript.hpp"
 #include <spdlog/spdlog.h>
@@ -126,6 +128,25 @@ bool Controller::loadScene(const std::filesystem::path& path) {
 
     loadedTextureIds_.clear();
     loadTexturesForModel();
+
+    model_.forEachDepthFirst([&](const std::shared_ptr<dice::core::GameObject>& obj) {
+        if (auto* deck = dynamic_cast<dice::components::Deck*>(obj.get())) {
+            deck->setFaceDown(deck->isFaceDown());
+        }
+        if (auto* die = dynamic_cast<dice::components::Dice*>(obj.get())) {
+            for (const auto& path : die->getFaceTextures()) {
+                if (!path.empty() && !loadedTextureIds_.contains(path)) {
+                    textures_.load(path, path);
+                    loadedTextureIds_.insert(path);
+                }
+            }
+            const auto& path = die->getFaceTexturePath(die->getValue());
+            if (!path.empty()) {
+                obj->setTexture(textures_.get(path).get());
+            }
+        }
+    });
+
     refreshFieldBounds();
 
     currentScenePath_ = path;
@@ -158,6 +179,41 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
         if (auto obj = model_.getObject(id)) {
             obj->shuffleChildren();
         }
+    });
+
+    lua_.registerFunction("cpp_dice_roll", [this](const std::string& id) -> int {
+        const auto obj = model_.getObject(id);
+        if (!obj) { return 0; }
+        auto* die = dynamic_cast<dice::components::Dice*>(obj.get());
+        if (!die) { return 0; }
+        const int val = die->roll();
+        const auto& path = die->getFaceTexturePath(val);
+        if (!path.empty()) {
+            if (!loadedTextureIds_.contains(path)) {
+                textures_.load(path, path);
+                loadedTextureIds_.insert(path);
+            }
+            obj->setTexture(textures_.get(path).get());
+        }
+        return val;
+    });
+
+    lua_.registerFunction("cpp_deck_draw", [this](const std::string& deck_id) -> std::string {
+        const auto obj = model_.getObject(deck_id);
+        if (!obj) { return ""; }
+        const auto& children = obj->getChildren();
+        if (children.empty()) { return ""; }
+        const auto top = children.back();
+        const std::string top_id = top->getId();
+        obj->removeChild(top_id);
+        model_.addRootObject(top);
+        return top_id;
+    });
+
+    lua_.registerFunction("cpp_deck_count", [this](const std::string& deck_id) -> int {
+        const auto obj = model_.getObject(deck_id);
+        if (!obj) { return 0; }
+        return static_cast<int>(obj->getChildren().size());
     });
 
     lua_.registerFunction("cpp_shuffle", [](sol::table t) {
