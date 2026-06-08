@@ -236,6 +236,7 @@ enable_testing()
 add_executable(dice_tests
   tests/core/test_GameObject.cpp
   tests/components/test_Chip.cpp
+  tests/components/test_Dice.cpp
   tests/components/test_Tile.cpp
   tests/components/test_Deck.cpp
   tests/ui/test_View.cpp
