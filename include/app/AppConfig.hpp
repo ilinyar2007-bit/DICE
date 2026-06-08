@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 namespace dice {
 
@@ -57,6 +58,18 @@ inline void from_json(const nlohmann::json& j, AppConfig& cfg) {
     cfg.resizable       = j.value("resizable",       cfg.resizable);
     cfg.luaMemoryLimitMb = j.value("luaMemoryLimitMb", cfg.luaMemoryLimitMb);
     cfg.maxSceneObjects  = j.value("maxSceneObjects",  cfg.maxSceneObjects);
+
+    // Clamp negative or zero values to safe defaults
+    if (cfg.luaMemoryLimitMb <= 0) {
+        spdlog::warn("AppConfig: luaMemoryLimitMb={} invalid, using default 64",
+                     cfg.luaMemoryLimitMb);
+        cfg.luaMemoryLimitMb = 64;
+    }
+    if (cfg.maxSceneObjects <= 0) {
+        spdlog::warn("AppConfig: maxSceneObjects={} invalid, using default 1000",
+                     cfg.maxSceneObjects);
+        cfg.maxSceneObjects = 1000;
+    }
 }
 
 inline void to_json(nlohmann::json& j, const AppConfig& cfg) {

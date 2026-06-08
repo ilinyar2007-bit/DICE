@@ -53,3 +53,21 @@ TEST_F(ConfigLoaderTest, GlobalScriptFieldIsLoaded) {
     auto cfg = dice::loadConfig(tmpPath_);
     EXPECT_EQ(cfg.globalScript, "scripts/globals.lua");
 }
+
+TEST_F(ConfigLoaderTest, NegativeLuaMemoryLimitClampsToDefault) {
+    writeJson(R"({"luaMemoryLimitMb": -1})");
+    auto cfg = dice::loadConfig(tmpPath_);
+    EXPECT_GT(cfg.luaMemoryLimitMb, 0);
+}
+
+TEST_F(ConfigLoaderTest, NegativeMaxSceneObjectsClampsToDefault) {
+    writeJson(R"({"maxSceneObjects": -5})");
+    auto cfg = dice::loadConfig(tmpPath_);
+    EXPECT_GT(cfg.maxSceneObjects, 0);
+}
+
+TEST_F(ConfigLoaderTest, ZeroMaxSceneObjectsClampsToDefault) {
+    writeJson(R"({"maxSceneObjects": 0})");
+    auto cfg = dice::loadConfig(tmpPath_);
+    EXPECT_GT(cfg.maxSceneObjects, 0);
+}
