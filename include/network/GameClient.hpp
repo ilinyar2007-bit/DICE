@@ -72,7 +72,9 @@ private:
     void applySnapshot(const nlohmann::json& state);
 
     sf::TcpSocket socket_;
+    std::mutex socketMutex_;
     std::string clientId_;
+    std::mutex clientIdMutex_;
     std::string serverIp_;
     uint16_t serverPort_ = 0;
 

@@ -38,7 +38,6 @@ struct ClientInfo {
     uint16_t port = 0;
     PlayerStatus status = PlayerStatus::Connecting;
     std::chrono::steady_clock::time_point lastPing;
-    std::string scriptsVersion;
 
     std::string toString() const {
         return name + " (" + ip + ":" + std::to_string(port) + ")";
@@ -55,8 +54,7 @@ struct NetworkMessage {
     std::vector<uint8_t> serialize() const;
     static NetworkMessage deserialize(const std::vector<uint8_t>& data);
 
-    static NetworkMessage createHandshake(const std::string& player_name,
-                                          const std::string& scripts_version);
+    static NetworkMessage createHandshake(const std::string& player_name);
     static NetworkMessage createHandshakeAck(const std::string& client_id, bool game_started);
     static NetworkMessage createPlayerReady(const std::string& player_id);
     static NetworkMessage createStartGame();
@@ -74,8 +72,6 @@ struct NetworkMessage {
     bool isValid() const;
     std::string toString() const;
 };
-
-constexpr const char* SCRIPTS_VERSION = "1.0.0";
 
 } // namespace dice::network
 

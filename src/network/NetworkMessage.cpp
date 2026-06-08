@@ -33,12 +33,10 @@ NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
     return msg;
 }
 
-NetworkMessage NetworkMessage::createHandshake(const std::string& player_name,
-                                               const std::string& scripts_version) {
+NetworkMessage NetworkMessage::createHandshake(const std::string& player_name) {
     NetworkMessage msg;
     msg.type = MessageType::Handshake;
     msg.data["playerName"] = player_name;
-    msg.data["scriptsVersion"] = scripts_version;
     msg.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::system_clock::now().time_since_epoch())
                         .count();

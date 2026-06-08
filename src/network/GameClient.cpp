@@ -1,7 +1,5 @@
 #include "network/GameClient.hpp"
 
-#include <random>
-
 #include <spdlog/spdlog.h>
 
 namespace dice::network {
@@ -10,6 +8,10 @@ GameClient::GameClient() = default;
 
 GameClient::~GameClient() {
     disconnect();
+
+    if (receiveThread_.joinable()) {
+        receiveThread_.join();
+    }
 }
 
 bool GameClient::connect(const std::string& host_ip,
@@ -34,7 +36,7 @@ bool GameClient::connect(const std::string& host_ip,
     serverPort_ = port;
     isConnected_ = true;
 
-    auto handshake = NetworkMessage::createHandshake(player_name, SCRIPTS_VERSION);
+    auto handshake = NetworkMessage::createHandshake(player_name);
     send(handshake);
 
     running_ = true;
@@ -57,10 +59,6 @@ void GameClient::disconnect() {
     isConnected_ = false;
     gameStarted_ = false;
 
-    if (receiveThread_.joinable()) {
-        receiveThread_.join();
-    }
-
     socket_.disconnect();
 
     spdlog::info("Disconnected from server");
@@ -75,12 +73,18 @@ void GameClient::receiveLoop() {
 
     while (running_ && isConnected_) {
         std::size_t received = 0;
-        const sf::Socket::Status status = socket_.receive(buffer.data(), buffer.size(), received);
+        sf::Socket::Status status;
+
+        {
+            std::lock_guard<std::mutex> lock(socketMutex_);
+            status = socket_.receive(buffer.data(), buffer.size(), received);
+        }
 
         if (status == sf::Socket::Done) {
             buffer.resize(received);
             auto msg = NetworkMessage::deserialize(buffer);
             handleMessage(msg);
+            buffer.resize(65536);
         } else if (status == sf::Socket::Disconnected) {
             spdlog::warn("Disconnected from server");
             disconnect();
@@ -96,11 +100,16 @@ void GameClient::handleMessage(const NetworkMessage& msg) {
 
     switch (msg.type) {
         case MessageType::HandshakeAck:
-            clientId_ = msg.data.value("clientId", "");
+            std::string newClientId;
+            {
+                std::lock_guard lock(clientIdMutex_);
+                clientId_ = msg.data.value("clientId", "");
+                newClientId = clientId_;
+            }
             gameStarted_ = msg.data.value("gameStarted", false);
-            spdlog::info("Handshake acknowledged. Client ID: {}", clientId_);
+            spdlog::info("Handshake acknowledged. Client ID: {}", newClientId);
             if (onConnected_) {
-                onConnected_(clientId_);
+                onConnected_(newClientId);
             }
             break;
 
@@ -243,7 +252,12 @@ void GameClient::sendMoveObject(const std::string& object_id, float x, float y) 
 }
 
 void GameClient::sendReady() {
-    auto ready = NetworkMessage::createPlayerReady(clientId_);
+    std::string id;
+    {
+        std::lock_guard<std::mutex> lock(clientIdMutex_);
+        id = clientId_;
+    }
+    auto ready = NetworkMessage::createPlayerReady(id);
     send(ready);
     spdlog::info("Sent ready status");
 }
@@ -258,6 +272,8 @@ void GameClient::send(const NetworkMessage& msg) {
         return;
     }
     auto data = msg.serialize();
+
+    std::lock_guard<std::mutex> lock(socketMutex_);
     auto status = socket_.send(data.data(), data.size());
 
     if (status != sf::Socket::Done) {

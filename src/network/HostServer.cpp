@@ -100,7 +100,6 @@ void HostServer::acceptNewClients() {
             info.port = clients_[clientId]->getRemotePort();
             info.status = PlayerStatus::Connecting;
             info.lastPing = std::chrono::steady_clock::now();
-            info.scriptsVersion = "";
             clientInfos_[clientId] = info;
         }
 
@@ -160,32 +159,16 @@ void HostServer::receiveFromClient(sf::TcpSocket& socket, const std::string& cli
 
 void HostServer::handleHandshake(const NetworkMessage& msg) {
     std::string playerName = msg.data.value("playerName", "Unknown");
-    std::string clientVersion = msg.data.value("scriptsVersion", "");
-
-    if (clientVersion != SCRIPTS_VERSION) {
-        spdlog::error("Client {} has wrong scripts version: {} (server: {})",
-                      msg.fromId,
-                      clientVersion,
-                      SCRIPTS_VERSION);
-
-        auto reject =
-            NetworkMessage::createDisconnect("Wrong game version. Please update your game!");
-        sendToClient(msg.fromId, reject);
-        removeClient(msg.fromId);
-        return;
-    }
 
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
         if (clientInfos_.contains(msg.fromId)) {
             clientInfos_[msg.fromId].name = playerName;
             clientInfos_[msg.fromId].status = PlayerStatus::Connected;
-            clientInfos_[msg.fromId].scriptsVersion = clientVersion;
         }
     }
 
-    spdlog::info(
-        "Player {} connected as {} (scripts version: {})", msg.fromId, playerName, clientVersion);
+    spdlog::info("Player {} connected as {}", msg.fromId, playerName);
 
     auto ack = NetworkMessage::createHandshakeAck(msg.fromId, gameStarted_);
     sendToClient(msg.fromId, ack);
