@@ -320,3 +320,44 @@ TEST_F(LuaScriptEngineTest, MemoryLimitAllowsNormalScript) {
     engine_.setMemoryLimit(size_t{64} * 1024 * 1024); // 64 MB
     EXPECT_TRUE(engine_.executeGlobalScriptFromSource("local x = 42"));
 }
+
+TEST_F(LuaScriptEngineTest, MemoryLimitAllowsShrinkingTable) {
+    // Install limit when g->used == 0, then let Lua shrink an array.
+    // Without the fix, delta = nsize - osize wraps to ~SIZE_MAX → OOM.
+    engine_.setMemoryLimit(16 * 1024 * 1024); // 16 MB
+    ASSERT_TRUE(engine_.executeGlobalScriptFromSource(R"(
+        local t = {}
+        for i = 1, 200 do t[i] = i end
+        for i = 101, 200 do t[i] = nil end
+        collectgarbage("collect")
+        result = t[1]
+    )"));
+    EXPECT_EQ(engine_.getGlobalVariable<int>("result", -1), 1);
+}
+
+TEST_F(LuaScriptEngineTest, MemoryLimitGCAfterSetDoesNotCrash) {
+    // Create garbage objects before the limit is installed, then install the
+    // limit and force a full GC.  Without the fix, each free call with
+    // g->used == 0 wraps used to ~SIZE_MAX; getMemoryUsed() will expose the
+    // corruption and the subsequent allocation script will OOM.
+    const size_t limit = 32UL * 1024 * 1024;
+    // Run a script that leaves dead objects for the GC (function bytecode +
+    // temporary strings become unreachable once the chunk is done).
+    engine_.executeGlobalScriptFromSource(R"(
+        local garbage = {}
+        for i = 1, 20 do garbage[i] = string.rep("x", i * 10) end
+    )");
+    engine_.setMemoryLimit(limit);
+    // Force a full GC cycle — this frees objects allocated before the custom
+    // allocator was installed.
+    engine_.executeGlobalScriptFromSource("collectgarbage('collect')");
+    // Without the fix, g->used has wrapped; it must stay below the limit.
+    EXPECT_LT(engine_.getMemoryUsed(), limit);
+    // A plain allocation must also succeed.
+    ASSERT_TRUE(engine_.executeGlobalScriptFromSource(R"(
+        local t = {}
+        for i = 1, 100 do t[i] = i end
+        ok = t[1] == 1
+    )"));
+    EXPECT_TRUE(engine_.getGlobalVariable<bool>("ok", false));
+}

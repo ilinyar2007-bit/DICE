@@ -14,18 +14,25 @@ namespace dice::scripting {
 void* LuaScriptEngine::guardedAlloc(void* ud, void* ptr, size_t osize, size_t nsize) {
     auto* g = static_cast<MemGuard*>(ud);
     if (nsize == 0) {
-        g->used -= osize;
+        // Guard against underflow: pre-limit allocs are not tracked in used
+        g->used = (g->used >= osize) ? (g->used - osize) : 0;
         std::free(ptr); // NOLINT(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)
         return nullptr;
     }
-    const size_t delta = nsize - ((ptr != nullptr) ? osize : 0);
-    if (g->limit > 0 && g->used + delta > g->limit) {
+
+    // Use signed arithmetic so a shrink (nsize < osize) gives a negative delta
+    const auto signed_delta =
+        static_cast<ptrdiff_t>(nsize) - (ptr != nullptr ? static_cast<ptrdiff_t>(osize) : 0);
+
+    const auto new_used = static_cast<ptrdiff_t>(g->used) + signed_delta;
+    if (g->limit > 0 && new_used > static_cast<ptrdiff_t>(g->limit)) {
         return nullptr;
     }
+
     // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)
     void* res = std::realloc(ptr, nsize);
     if (res != nullptr) {
-        g->used += delta;
+        g->used = (new_used > 0) ? static_cast<size_t>(new_used) : 0;
     }
     return res;
 }
