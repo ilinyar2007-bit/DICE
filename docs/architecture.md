@@ -209,7 +209,7 @@ sequenceDiagram
 | `resizable` | bool | `true` | Разрешить изменение размера окна |
 | `clearR` / `clearG` / `clearB` | int | `30/30/40` | Цвет фона (0–255) |
 | `startScene` | string | `"scenes/demo.json"` | Путь к начальной сцене |
-| `globalScript` | string | `""` | ⚠️ Поле парсится, но не используется — функциональность не реализована |
+| `globalScript` | string | `""` | Поле парсится, но не используется — функциональность не реализована |
 | `fonts` | array | `[]` | `[{id, path}]` — список шрифтов |
 | `showFPS` | bool | `true` | Оверлей счётчика FPS |
 | `showObjectCount` | bool | `true` | Оверлей числа объектов |
