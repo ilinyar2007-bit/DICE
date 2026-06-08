@@ -67,7 +67,7 @@ void HostServer::serverLoop() {
 
         std::vector<std::pair<std::string, sf::TcpSocket*>> clientsCopy;
         {
-            std::lock_guard<std::mutex> lock(clientsMutex_);
+            const std::lock_guard<std::mutex> lock(clientsMutex_);
             for (const auto& [id, socket] : clients_) {
                 clientsCopy.emplace_back(id, socket.get());
             }
@@ -303,7 +303,7 @@ void HostServer::sendToClient(const std::string& client_id, const NetworkMessage
         }
     }
 
-    if (!socket) {
+    if (socket == nullptr) {
         return;
     }
     auto data = msg.serialize();
@@ -312,31 +312,24 @@ void HostServer::sendToClient(const std::string& client_id, const NetworkMessage
     if (status != sf::Socket::Done) {
         spdlog::warn(
             "Failed to send to client {}, status: {}", client_id, static_cast<int>(status));
-        removeClient(client_id);
     }
 }
 
 void HostServer::broadcast(const NetworkMessage& msg, const std::string& exclude_id) {
     auto data = msg.serialize();
 
-    std::vector<std::string> failedClients;
     {
-        std::lock_guard lock(clientsMutex_);
+        const std::lock_guard lock(clientsMutex_);
         for (const auto& [id, socket] : clients_) {
             if (id == exclude_id) {
                 continue;
             }
             auto status = socket->send(data.data(), data.size());
             if (status != sf::Socket::Done) {
-                failedClients.push_back(id);
                 spdlog::warn(
                     "Broadcast failed for client {}, status: {}", id, static_cast<int>(status));
             }
         }
-    }
-
-    for (const auto& id : failedClients) {
-        removeClient(id);
     }
 }
 
@@ -344,7 +337,7 @@ void HostServer::removeClient(const std::string& client_id) {
     bool hadClient = false;
 
     {
-        std::lock_guard<std::mutex> lock(clientsMutex_);
+        const std::lock_guard<std::mutex> lock(clientsMutex_);
         if (clientInfos_.contains(client_id)) {
             hadClient = true;
             spdlog::info("Client disconnected: {}", clientInfos_[client_id].name);

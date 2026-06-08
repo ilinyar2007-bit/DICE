@@ -82,7 +82,7 @@ void GameClient::receiveLoop() {
             handleMessage(msg);
         } else if (status == sf::Socket::Disconnected) {
             spdlog::warn("Disconnected from server");
-            isConnected_ = false;
+            disconnect();
             break;
         }
 
@@ -261,7 +261,6 @@ void GameClient::send(const NetworkMessage& msg) {
 
     if (status != sf::Socket::Done) {
         spdlog::warn("Failed to send to server, status: {}", static_cast<int>(status));
-        disconnect();
     }
 }
 
