@@ -178,6 +178,7 @@ sequenceDiagram
 | `self:getScaleX()` / `self:getScaleY()` / `self:setScale(x, y)` | Масштаб |
 | `self:isVisible()` / `self:setVisible(bool)` | Видимость |
 | `self:isActive()` / `self:setActive(bool)` | Активность (включая дочерние события) |
+| `self:isDraggable()` / `self:setDraggable(bool)` | Перетаскиваемость |
 | `self:setColor(r, g, b, a)` | Цвет (RGBA, 0–255) |
 | `self:getIntProperty(key, default)` | Читать int-свойство из `properties` |
 | `self:getFloatProperty(key, default)` | Читать float-свойство |
@@ -186,6 +187,20 @@ sequenceDiagram
 | `self:setIntProperty(key, val)` | Задать int-свойство |
 | `self:setStringProperty(key, val)` | Задать string-свойство |
 | `self:hasTag(tag)` / `self:getTags()` | Проверить/получить теги объекта |
+
+`engine.getObject(id)` возвращает конкретный тип — если объект является `Card`, `Chip` и т.д., Lua получает именно этот тип и может вызывать его методы.
+
+### Методы подтипов (доступны через `self` или объект из `engine.getObject`)
+
+**Card:** `flip()`, `isFaceUp()`, `setFaceUp(bool)`, `setPlayer(int)`, `getPlayer()`
+
+**Chip:** `getRadius()`, `setRadius(float)`, `getAssetId()`, `setAssetId(string)`, `setPlayer(int)`, `getPlayer()`
+
+**Dice:** `getFaceCount()`, `getValue()` — для броска используй `cpp_dice_roll(id)`
+
+**Tile:** `getCol()`, `getRow()`, `getOccupantId()`, `setOccupant(string)`, `clearOccupant()`, `isOccupied()`, `accepts(string)`
+
+**Deck:** `isFaceDown()`, `count()`, `isEmpty()` — для операций с картами используй `cpp_deck_draw(id)`, `cpp_deck_count(id)`, `cpp_shuffle_children(id)`
 
 ### События (имена триггеров)
 

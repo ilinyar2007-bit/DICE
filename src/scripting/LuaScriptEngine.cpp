@@ -4,6 +4,11 @@
 #include <fstream>
 #include <sstream>
 
+#include "components/Card.hpp"
+#include "components/Chip.hpp"
+#include "components/Deck.hpp"
+#include "components/Dice.hpp"
+#include "components/Tile.hpp"
 #include "core/GameObject.hpp"
 #include "core/Model.hpp"
 #include "scripting/LuaScript.hpp"
@@ -38,6 +43,7 @@ void LuaScriptEngine::setMemoryLimit(size_t bytes) {
 LuaScriptEngine::LuaScriptEngine() {
     initLibraries();
     registerGameObjectType();
+    registerComponentTypes();
     registerStandardCallbacks();
     registerEngineTable();
 }
@@ -138,7 +144,107 @@ void LuaScriptEngine::registerGameObjectType() {
             return o.hasTag(tag);
         },
         "getTags",
-        [](const dice::core::GameObject& o) -> std::vector<std::string> { return o.getTags(); });
+        [](const dice::core::GameObject& o) -> std::vector<std::string> { return o.getTags(); },
+        // перетаскивание
+        "isDraggable",
+        &dice::core::GameObject::isDraggable,
+        "setDraggable",
+        &dice::core::GameObject::setDraggable);
+}
+
+void LuaScriptEngine::registerComponentTypes() {
+    lua_.new_usertype<dice::components::Card>(
+        "Card",
+        sol::base_classes,
+        sol::bases<dice::core::GameObject>(),
+        "flip",
+        &dice::components::Card::flip,
+        "isFaceUp",
+        &dice::components::Card::isFaceUp,
+        "setFaceUp",
+        &dice::components::Card::setFaceUp,
+        "setPlayer",
+        &dice::components::Card::setPlayer,
+        "getPlayer",
+        &dice::components::Card::getPlayer);
+
+    lua_.new_usertype<dice::components::Chip>(
+        "Chip",
+        sol::base_classes,
+        sol::bases<dice::core::GameObject>(),
+        "getRadius",
+        &dice::components::Chip::getRadius,
+        "setRadius",
+        &dice::components::Chip::setRadius,
+        "getAssetId",
+        &dice::components::Chip::getAssetId,
+        "setAssetId",
+        &dice::components::Chip::setAssetId,
+        "setPlayer",
+        &dice::components::Chip::setPlayer,
+        "getPlayer",
+        &dice::components::Chip::getPlayer);
+
+    lua_.new_usertype<dice::components::Dice>(
+        "Dice",
+        sol::base_classes,
+        sol::bases<dice::core::GameObject>(),
+        "getFaceCount",
+        &dice::components::Dice::getFaceCount,
+        "getValue",
+        &dice::components::Dice::getValue);
+
+    lua_.new_usertype<dice::components::Tile>(
+        "Tile",
+        sol::base_classes,
+        sol::bases<dice::core::GameObject>(),
+        "getCol",
+        &dice::components::Tile::getCol,
+        "getRow",
+        &dice::components::Tile::getRow,
+        "getOccupantId",
+        &dice::components::Tile::getOccupantId,
+        "setOccupant",
+        &dice::components::Tile::setOccupant,
+        "clearOccupant",
+        &dice::components::Tile::clearOccupant,
+        "isOccupied",
+        &dice::components::Tile::isOccupied,
+        "accepts",
+        &dice::components::Tile::accepts);
+
+    lua_.new_usertype<dice::components::Deck>(
+        "Deck",
+        sol::base_classes,
+        sol::bases<dice::core::GameObject>(),
+        "isFaceDown",
+        &dice::components::Deck::isFaceDown,
+        "count",
+        &dice::components::Deck::count,
+        "isEmpty",
+        &dice::components::Deck::isEmpty);
+}
+
+sol::object LuaScriptEngine::toSolObject(dice::core::GameObject* obj) {
+    if (obj == nullptr) {
+        return sol::nil;
+    }
+    if (auto* p = dynamic_cast<dice::components::Card*>(obj)) {
+        return sol::make_object(lua_, p);
+    }
+    if (auto* p = dynamic_cast<dice::components::Chip*>(obj)) {
+        return sol::make_object(lua_, p);
+    }
+    if (auto* p = dynamic_cast<dice::components::Dice*>(obj)) {
+        return sol::make_object(lua_, p);
+    }
+    if (auto* p = dynamic_cast<dice::components::Tile*>(obj)) {
+        return sol::make_object(lua_, p);
+    }
+    if (auto* p = dynamic_cast<dice::components::Deck*>(obj)) {
+        return sol::make_object(lua_, p);
+    }
+    return sol::make_object(lua_, obj);
 }
 
 void LuaScriptEngine::registerEngineTable() {
@@ -238,14 +344,14 @@ bool LuaScriptEngine::fireBindingRef(const std::string& ref, dice::core::GameObj
         if (!fn.valid()) {
             return false;
         }
-        if (auto result = fn(obj); !result.valid()) {
+        if (auto result = fn(toSolObject(obj)); !result.valid()) {
             const sol::error err = result;
             spdlog::error("LuaScriptEngine: '{}' on '{}': {}", ref, obj->getId(), err.what());
         }
         return true;
     }
     if (auto tit = triggerCatalog_.find(ref); tit != triggerCatalog_.end()) {
-        if (auto result = tit->second(obj); !result.valid()) {
+        if (auto result = tit->second(toSolObject(obj)); !result.valid()) {
             const sol::error err = result;
             spdlog::error(
                 "LuaScriptEngine: trigger '{}' on '{}': {}", ref, obj->getId(), err.what());
@@ -267,7 +373,7 @@ bool LuaScriptEngine::fireEvent(const std::string& event_name, dice::core::GameO
 
     if (auto cit = inlineCallbacks_.find(obj->getId()); cit != inlineCallbacks_.end()) {
         if (auto eit = cit->second.find(event_name); eit != cit->second.end()) {
-            if (auto result = eit->second(obj); !result.valid()) {
+            if (auto result = eit->second(toSolObject(obj)); !result.valid()) {
                 const sol::error err = result;
                 spdlog::error("LuaScriptEngine: inline '{}' on '{}': {}",
                               event_name,
@@ -395,8 +501,13 @@ void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
         return;
     }
 
-    engine.set_function("getObject",
-                        [&model](const std::string& id) { return model.getObject(id); });
+    engine.set_function("getObject", [this, &model](const std::string& id) -> sol::object {
+        auto ptr = model.getObject(id);
+        if (!ptr) {
+            return sol::nil;
+        }
+        return toSolObject(ptr.get());
+    });
 
     engine.set_function("intersects",
                         [&model](const std::string& id1, const std::string& id2) -> bool {
