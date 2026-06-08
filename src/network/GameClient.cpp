@@ -70,28 +70,30 @@ void GameClient::disconnect() {
 
 void GameClient::receiveLoop() {
     std::vector<uint8_t> buffer(65536);
+    sf::SocketSelector selector;
+    selector.add(socket_);
 
     while (running_ && isConnected_) {
-        std::size_t received = 0;
-        sf::Socket::Status status;
+        if (selector.wait(sf::milliseconds(100))) {
+            std::size_t received = 0;
+            sf::Socket::Status status = sf::Socket::Error;
 
-        {
-            std::lock_guard<std::mutex> lock(socketMutex_);
-            status = socket_.receive(buffer.data(), buffer.size(), received);
+            {
+                const std::lock_guard<std::mutex> lock(socketMutex_);
+                status = socket_.receive(buffer.data(), buffer.size(), received);
+            }
+
+            if (status == sf::Socket::Done) {
+                buffer.resize(received);
+                auto msg = NetworkMessage::deserialize(buffer);
+                handleMessage(msg);
+                buffer.resize(65536);
+            } else if (status == sf::Socket::Disconnected) {
+                spdlog::warn("Disconnected from server");
+                disconnect();
+                break;
+            }
         }
-
-        if (status == sf::Socket::Done) {
-            buffer.resize(received);
-            auto msg = NetworkMessage::deserialize(buffer);
-            handleMessage(msg);
-            buffer.resize(65536);
-        } else if (status == sf::Socket::Disconnected) {
-            spdlog::warn("Disconnected from server");
-            disconnect();
-            break;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -99,10 +101,10 @@ void GameClient::handleMessage(const NetworkMessage& msg) {
     spdlog::debug("Received: {}", msg.toString());
 
     switch (msg.type) {
-        case MessageType::HandshakeAck:
+        case MessageType::HandshakeAck: {
             std::string newClientId;
             {
-                std::lock_guard lock(clientIdMutex_);
+                const std::lock_guard lock(clientIdMutex_);
                 clientId_ = msg.data.value("clientId", "");
                 newClientId = clientId_;
             }
@@ -112,6 +114,7 @@ void GameClient::handleMessage(const NetworkMessage& msg) {
                 onConnected_(newClientId);
             }
             break;
+        }
 
         case MessageType::PlayerJoined: {
             ClientInfo info;
@@ -188,6 +191,7 @@ void GameClient::handleMessage(const NetworkMessage& msg) {
         }
 
         default:
+            spdlog::warn("Unknown message type received: {}", static_cast<int>(msg.type));
             break;
     }
 }
