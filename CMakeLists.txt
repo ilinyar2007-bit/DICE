@@ -104,6 +104,7 @@ add_library(dice_core STATIC
   src/components/Card.cpp
   src/components/Tile.cpp
   src/components/Deck.cpp
+  src/components/Dice.cpp
   src/ui/View.cpp
   src/core/Model.cpp
   src/core/Action.cpp
