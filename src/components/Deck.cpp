@@ -5,8 +5,7 @@
 
 namespace dice::components {
 
-Deck::Deck(const std::string& id, const std::string& name)
-    : GameObject(id, name) {
+Deck::Deck(const std::string& id, const std::string& name) : GameObject(id, name) {
     setType("Deck");
 }
 

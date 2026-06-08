@@ -4,8 +4,7 @@
 
 namespace dice::components {
 
-Tile::Tile(const std::string& id, const std::string& name)
-    : GameObject(id, name) {
+Tile::Tile(const std::string& id, const std::string& name) : GameObject(id, name) {
     setType("Tile");
 }
 

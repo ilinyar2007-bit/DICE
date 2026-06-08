@@ -47,7 +47,8 @@ TEST(DiceTest, RollUpdateValue) {
 
 TEST(DiceTest, GetFaceTexturePathValidIndex) {
     Dice d("dice_1", "Dice");
-    d.setFaceTextures({"face1.png", "face2.png", "face3.png", "face4.png", "face5.png", "face6.png"});
+    d.setFaceTextures(
+        {"face1.png", "face2.png", "face3.png", "face4.png", "face5.png", "face6.png"});
     EXPECT_EQ(d.getFaceTexturePath(1), "face1.png");
     EXPECT_EQ(d.getFaceTexturePath(6), "face6.png");
 }

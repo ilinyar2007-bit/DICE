@@ -183,9 +183,13 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
 
     lua_.registerFunction("cpp_dice_roll", [this](const std::string& id) -> int {
         const auto obj = model_.getObject(id);
-        if (!obj) { return 0; }
+        if (!obj) {
+            return 0;
+        }
         auto* die = dynamic_cast<dice::components::Dice*>(obj.get());
-        if (!die) { return 0; }
+        if (!die) {
+            return 0;
+        }
         const int val = die->roll();
         const auto& path = die->getFaceTexturePath(val);
         if (!path.empty()) {
@@ -200,9 +204,13 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
 
     lua_.registerFunction("cpp_deck_draw", [this](const std::string& deck_id) -> std::string {
         const auto obj = model_.getObject(deck_id);
-        if (!obj) { return ""; }
+        if (!obj) {
+            return "";
+        }
         const auto& children = obj->getChildren();
-        if (children.empty()) { return ""; }
+        if (children.empty()) {
+            return "";
+        }
         const auto top = children.back();
         const std::string top_id = top->getId();
         obj->removeChild(top_id);
@@ -212,7 +220,9 @@ void Controller::registerDefaultFunctions(const sf::Font* font) {
 
     lua_.registerFunction("cpp_deck_count", [this](const std::string& deck_id) -> int {
         const auto obj = model_.getObject(deck_id);
-        if (!obj) { return 0; }
+        if (!obj) {
+            return 0;
+        }
         return static_cast<int>(obj->getChildren().size());
     });
 
