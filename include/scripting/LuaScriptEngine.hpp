@@ -107,6 +107,17 @@ public:
         }
     }
 
+    template <typename... Args> void callGlobalIfExists(const std::string& name, Args&&... args) {
+        const sol::protected_function fn{lua_[name]};
+        if (!fn.valid())
+            return;
+        auto result = fn(std::forward<Args>(args)...);
+        if (!result.valid()) {
+            const sol::error err{result};
+            spdlog::error("LuaScriptEngine::callGlobalIfExists '{}': {}", name, err.what());
+        }
+    }
+
     void setMemoryLimit(size_t bytes);
     [[nodiscard]] size_t getMemoryUsed() const {
         return memGuard_.used;

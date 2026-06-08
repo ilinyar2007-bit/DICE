@@ -15,6 +15,9 @@ nlohmann::json makeValidObject(const std::string& id = "obj_1",
 }
 
 nlohmann::json makeValidScene(nlohmann::json objects = nlohmann::json::array()) {
+    if (!objects.is_array()) {
+        objects = nlohmann::json::array({std::move(objects)});
+    }
     if (objects.empty()) {
         objects.push_back(makeValidObject());
     }
