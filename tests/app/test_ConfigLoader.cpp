@@ -71,3 +71,9 @@ TEST_F(ConfigLoaderTest, ZeroMaxSceneObjectsClampsToDefault) {
     auto cfg = dice::loadConfig(tmpPath_);
     EXPECT_GT(cfg.maxSceneObjects, 0);
 }
+
+TEST_F(ConfigLoaderTest, EmptyGlobalScriptIsIgnored) {
+    writeJson(R"({})");
+    auto cfg = dice::loadConfig(tmpPath_);
+    EXPECT_TRUE(cfg.globalScript.empty());
+}
