@@ -78,6 +78,7 @@ bool Application::init(const std::string& start_scene) {
     // View Config
     view_.setFontManager(&fonts_);
     const view::ViewConfig vcfg{
+        .backgroundColor = sf::Color(config_.clearR, config_.clearG, config_.clearB),
         .showFPS = config_.showFPS,
         .showObjectCount = config_.showObjectCount,
         .showControls = config_.showControls,
@@ -128,8 +129,6 @@ void Application::update(float dt) {
 }
 
 void Application::render() {
-    window_.clear(sf::Color(config_.clearR, config_.clearG, config_.clearB));
-
     auto objects = controller_.collectObjects();
     view_.render(objects);
 

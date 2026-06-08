@@ -4,19 +4,18 @@
 
 ## Как запустить любой пример
 
-1. Скопируйте нужный JSON-файл как `game.json` в корень проекта (или укажите путь в `startScene`).
-2. Убедитесь что ресурсы доступны:
-   ```bash
-   ln -s samples/assets assets
-   ln -s samples/scenes scenes
-   ln -s samples/scripts scripts
+После сборки (`cmake . -B build && cd build && make`) CMake автоматически копирует `assets/`, `scenes/`, `scripts/` и `game.json` в папку `build/`.
+
+1. Отредактируйте `build/game.json` — укажите нужную сцену в поле `startScene`:
+   ```json
+   { "startScene": "scenes/snippets/draw-object.json" }
    ```
-3. Запустите:
+2. Запустите из папки `build/`:
    ```bash
    ./dice
    ```
 
-> Все сниппеты используют ресурсы из `samples/assets/`. Символическая ссылка `assets → samples/assets` обязательна.
+> Запускайте бинарник из `build/` — `game.json` и все ресурсы ищутся относительно рабочей директории.
 
 ---
 
@@ -71,7 +70,7 @@
 
 ## Готовые игры
 
-| | Игра | Описание | Теги |
-|--|------|----------|------|
-| ![](gifs/dice-game.gif) | [Игра в кости](games/dice-game.md) | Два игрока бросают кубики, набирая очки до 21 | `triggers` `scripting` `textures` `state` |
-| ![](gifs/nardi.gif) | [Нарды](games/nardi.md) | Длинные нарды: перетаскивание шашек, пресеты, Lua-логика хода | `drag` `presets` `hierarchy` `keyboard` |
+| Игра | Описание | Теги |
+|------|----------|------|
+| [Игра в кости](games/dice-game.md) | Два игрока бросают кубики, набирая очки до 21 | `triggers` `scripting` `textures` `state` |
+| [Нарды](games/nardi.md) | Длинные нарды: перетаскивание шашек, пресеты, Lua-логика хода | `drag` `presets` `hierarchy` `keyboard` |
