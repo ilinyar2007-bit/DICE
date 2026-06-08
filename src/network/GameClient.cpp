@@ -27,6 +27,7 @@ bool GameClient::connect(const std::string& host_ip,
         spdlog::error("Failed to connect: {}", static_cast<int>(status));
         return false;
     }
+    lastPingTime_ = std::chrono::steady_clock::now();
 
     socket_.setBlocking(false);
     serverIp_ = host_ip;
@@ -265,13 +266,12 @@ void GameClient::send(const NetworkMessage& msg) {
 }
 
 void GameClient::update() {
-    static auto lastPingTime = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
 
-    if (std::chrono::duration<float>(now - lastPingTime).count() > 5.0F) {
+    if (std::chrono::duration<float>(now - lastPingTime_).count() > 5.0F) {
         auto ping = NetworkMessage::createPing();
         send(ping);
-        lastPingTime = now;
+        lastPingTime_ = now;
     }
 }
 

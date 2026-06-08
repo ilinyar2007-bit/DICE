@@ -78,6 +78,7 @@ private:
 
     std::atomic<bool> isConnected_{false};
     std::atomic<bool> gameStarted_{false};
+    std::chrono::steady_clock::time_point lastPingTime_;
 
     std::thread receiveThread_;
     std::atomic<bool> running_{false};
