@@ -71,7 +71,7 @@ TEST(DiceTest, JsonRoundTrip) {
     EXPECT_EQ(json["type"], "Dice");
     EXPECT_EQ(json["faceCount"], 8);
     EXPECT_EQ(json["value"], 5);
-    ASSERT_EQ(json["faceTextures"].size(), 2u);
+    ASSERT_EQ(json["faceTextures"].size(), 2U);
     EXPECT_EQ(json["faceTextures"][0], "f1.png");
 
     Dice loaded("", "");
@@ -79,7 +79,7 @@ TEST(DiceTest, JsonRoundTrip) {
     EXPECT_EQ(loaded.getId(), "dice_1");
     EXPECT_EQ(loaded.getFaceCount(), 8);
     EXPECT_EQ(loaded.getValue(), 5);
-    ASSERT_EQ(loaded.getFaceTextures().size(), 2u);
+    ASSERT_EQ(loaded.getFaceTextures().size(), 2U);
     EXPECT_EQ(loaded.getFaceTextures()[0], "f1.png");
 }
 

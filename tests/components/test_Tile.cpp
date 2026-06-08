@@ -35,7 +35,7 @@ TEST(TileTest, OccupantSetClearAndIsOccupied) {
 }
 
 TEST(TileTest, AcceptsAllWhenListEmpty) {
-    Tile t("t1", "Cell");
+    const Tile t("t1", "Cell");
     EXPECT_TRUE(t.accepts("Chip"));
     EXPECT_TRUE(t.accepts("Card"));
     EXPECT_TRUE(t.accepts("Dice"));
@@ -66,7 +66,7 @@ TEST(TileTest, JsonRoundTrip) {
     EXPECT_EQ(json["col"], 3);
     EXPECT_EQ(json["row"], 5);
     EXPECT_EQ(json["occupantId"], "chip_7");
-    ASSERT_EQ(json["acceptedTypes"].size(), 2u);
+    ASSERT_EQ(json["acceptedTypes"].size(), 2U);
     EXPECT_EQ(json["acceptedTypes"][0], "Chip");
 
     Tile loaded("", "");
@@ -76,7 +76,7 @@ TEST(TileTest, JsonRoundTrip) {
     EXPECT_EQ(loaded.getRow(), 5);
     EXPECT_EQ(loaded.getOccupantId(), "chip_7");
     EXPECT_TRUE(loaded.isOccupied());
-    ASSERT_EQ(loaded.getAcceptedTypes().size(), 2u);
+    ASSERT_EQ(loaded.getAcceptedTypes().size(), 2U);
     EXPECT_EQ(loaded.getAcceptedTypes()[0], "Chip");
     EXPECT_FLOAT_EQ(loaded.getPosition().x, 320.F);
     EXPECT_EQ(loaded.getZOrder(), 2);
