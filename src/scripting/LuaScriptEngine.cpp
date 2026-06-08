@@ -398,6 +398,15 @@ void LuaScriptEngine::registerModelAccess(dice::core::Model& model,
     engine.set_function("getObject",
                         [&model](const std::string& id) { return model.getObject(id); });
 
+    engine.set_function("intersects", [&model](const std::string& id1, const std::string& id2) -> bool {
+        const std::shared_ptr<dice::core::GameObject> a = model.getObject(id1);
+        const std::shared_ptr<dice::core::GameObject> b = model.getObject(id2);
+        if (!a || !b) {
+            return false;
+        }
+        return a->intersects(*b);
+    });
+
     engine.set_function("loadScene", [this](const std::string& path) {
         if (sceneLoadCallback_) {
             sceneLoadCallback_(path);
