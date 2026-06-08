@@ -1,5 +1,8 @@
-#ifndef DICE_DICE_HPP
-#define DICE_DICE_HPP
+#ifndef DICE_COMPONENTS_DICE_HPP
+#define DICE_COMPONENTS_DICE_HPP
+
+#include <string>
+#include <vector>
 
 #include "core/GameObject.hpp"
 
@@ -9,32 +12,30 @@ class Dice : public core::GameObject {
 public:
     Dice(const std::string& id, const std::string& name);
 
-    // ================= State =================
+    void setFaceCount(int count) { faceCount_ = count; }
+    int getFaceCount() const { return faceCount_; }
 
-    void setValue(int value) {
-        value_ = value;
-    }
-    int getValue() const {
-        return value_;
-    }
+    void setValue(int value) { value_ = value; }
+    int getValue() const { return value_; }
 
-    void setAssetId(const std::string& asset_id) {
-        asset_id_ = asset_id;
+    void setFaceTextures(std::vector<std::string> textures) {
+        faceTextures_ = std::move(textures);
     }
-    const std::string& getAssetId() const {
-        return asset_id_;
-    }
+    const std::vector<std::string>& getFaceTextures() const { return faceTextures_; }
 
-    // ================= Serialization =================
+    const std::string& getFaceTexturePath(int value) const;
+
+    int roll();
 
     nlohmann::json toJson() const override;
     void fromJson(const nlohmann::json& json) override;
 
 private:
-    int value_ = 0;
-    std::string asset_id_;
+    int faceCount_ = 6;
+    int value_ = 1;
+    std::vector<std::string> faceTextures_;
 };
 
 } // namespace dice::components
 
-#endif
+#endif // DICE_COMPONENTS_DICE_HPP
