@@ -386,10 +386,8 @@ void Controller::onMouseReleased(const sf::Event::MouseButtonEvent& /*ev*/) {
 }
 
 void Controller::refreshFieldBounds() {
-    fieldBounds_ = sf::FloatRect(0.F,
-                                 0.F,
-                                 static_cast<float>(window_.getSize().x),
-                                 static_cast<float>(window_.getSize().y));
+    fieldBounds_ = sf::FloatRect(
+        0.F, 0.F, static_cast<float>(window_.getSize().x), static_cast<float>(window_.getSize().y));
     if (auto board = model_.getObject("board")) {
         fieldBounds_ = board->getGlobalBounds();
     }
