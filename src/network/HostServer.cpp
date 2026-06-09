@@ -4,6 +4,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "network/SocketUtils.hpp"
+
 namespace dice::network {
 
 HostServer::HostServer(core::Model& model,
@@ -292,7 +294,7 @@ void HostServer::sendToClient(const std::string& client_id, const NetworkMessage
         return;
     }
     auto data = msg.serialize();
-    auto status = socket->send(data.data(), data.size());
+    auto status = sendAll(*socket, data);
 
     if (status != sf::Socket::Done) {
         spdlog::warn(
@@ -309,7 +311,7 @@ void HostServer::broadcast(const NetworkMessage& msg, const std::string& exclude
             if (id == exclude_id) {
                 continue;
             }
-            auto status = socket->send(data.data(), data.size());
+            auto status = sendAll(*socket, data);
             if (status != sf::Socket::Done) {
                 spdlog::warn(
                     "Broadcast failed for client {}, status: {}", id, static_cast<int>(status));

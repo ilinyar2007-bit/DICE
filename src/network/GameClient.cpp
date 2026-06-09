@@ -2,6 +2,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "network/SocketUtils.hpp"
+
 namespace dice::network {
 
 GameClient::GameClient() = default;
@@ -278,7 +280,7 @@ void GameClient::send(const NetworkMessage& msg) {
     auto data = msg.serialize();
 
     const std::lock_guard<std::mutex> lock(socketMutex_);
-    auto status = socket_.send(data.data(), data.size());
+    auto status = sendAll(socket_, data);
 
     if (status != sf::Socket::Done) {
         spdlog::warn("Failed to send to server, status: {}", static_cast<int>(status));
