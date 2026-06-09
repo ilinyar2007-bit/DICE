@@ -1,8 +1,9 @@
+#include <filesystem>
+#include <fstream>
+
 #include "app/AppConfig.hpp"
 #include "app/ConfigLoader.hpp"
 #include <gtest/gtest.h>
-#include <fstream>
-#include <filesystem>
 #include <unistd.h>
 
 class ConfigLoaderTest : public ::testing::Test {
@@ -10,7 +11,7 @@ protected:
     std::filesystem::path tmpPath_;
     void SetUp() override {
         tmpPath_ = std::filesystem::temp_directory_path() /
-            ("dice_test_" + std::to_string(::getpid()) + ".json");
+                   ("dice_test_" + std::to_string(::getpid()) + ".json");
     }
     void TearDown() override {
         std::filesystem::remove(tmpPath_);

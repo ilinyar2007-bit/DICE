@@ -1,8 +1,9 @@
+#include <filesystem>
+#include <fstream>
+
 #include "core/GameObject.hpp"
 #include "scripting/LuaScript.hpp"
 #include "scripting/LuaScriptEngine.hpp"
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <unistd.h>
 
@@ -368,7 +369,10 @@ TEST_F(LuaScriptEngineTest, MemoryLimitGCAfterSetDoesNotCrash) {
 TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsFalseOnSyntaxError) {
     namespace fs = std::filesystem;
     auto tmp = fs::temp_directory_path() / ("bad_script_" + std::to_string(::getpid()) + ".lua");
-    { std::ofstream f(tmp); f << "@@@not valid lua"; }
+    {
+        std::ofstream f(tmp);
+        f << "@@@not valid lua";
+    }
     EXPECT_FALSE(engine_.executeGlobalScript(tmp));
     fs::remove(tmp);
 }
@@ -376,7 +380,10 @@ TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsFalseOnSyntaxError) {
 TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsTrueOnSuccess) {
     namespace fs = std::filesystem;
     auto tmp = fs::temp_directory_path() / ("good_script_" + std::to_string(::getpid()) + ".lua");
-    { std::ofstream f(tmp); f << "global_ok = true"; }
+    {
+        std::ofstream f(tmp);
+        f << "global_ok = true";
+    }
     EXPECT_TRUE(engine_.executeGlobalScript(tmp));
     EXPECT_TRUE(engine_.getGlobalVariable<bool>("global_ok", false));
     fs::remove(tmp);
@@ -397,8 +404,7 @@ TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
     // a no-op handler.  The counter starts at 0 in the Lua global state
     // because it has never been set before.
     const auto mod_path =
-        fs::temp_directory_path() /
-        ("mod_cache_test_" + std::to_string(::getpid()) + ".lua");
+        fs::temp_directory_path() / ("mod_cache_test_" + std::to_string(::getpid()) + ".lua");
     {
         std::ofstream f(mod_path);
         f << "load_count = (load_count or 0) + 1\n"
@@ -439,9 +445,7 @@ TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
 TEST_F(LuaScriptEngineTest, GetGlobalVariableWrongTypeReturnsDefault) {
     engine_.executeGlobalScriptFromSource(R"(flag = "yes")");
     bool result = true;
-    EXPECT_NO_THROW({
-        result = engine_.getGlobalVariable<bool>("flag", false);
-    });
+    EXPECT_NO_THROW({ result = engine_.getGlobalVariable<bool>("flag", false); });
     EXPECT_EQ(result, false); // type mismatch → default
 }
 

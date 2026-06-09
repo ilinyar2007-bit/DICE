@@ -90,8 +90,7 @@ bool Application::init(const std::string& start_scene) {
     lua_.setMemoryLimit(static_cast<size_t>(config_.luaMemoryLimitMb) * 1024ULL * 1024ULL);
     if (!config_.globalScript.empty()) {
         if (!lua_.executeGlobalScript(config_.globalScript)) {
-            spdlog::error("Application: failed to execute globalScript: {}",
-                          config_.globalScript);
+            spdlog::error("Application: failed to execute globalScript: {}", config_.globalScript);
         }
     }
     lua_.registerFunction("log", [](const std::string& msg) { spdlog::info("[Lua] {}", msg); });
