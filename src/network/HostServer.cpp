@@ -31,6 +31,8 @@ bool HostServer::start(uint16_t port) {
     listener_.setBlocking(false);
     isRunning_ = true;
     gameStarted_ = false;
+    lastPingTime_ = std::chrono::steady_clock::now();
+    lastBroadcastTime_ = std::chrono::steady_clock::now();
 
     serverThread_ = std::thread(&HostServer::serverLoop, this);
 
