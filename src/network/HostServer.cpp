@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "network/SocketUtils.hpp"
 #include <spdlog/spdlog.h>
 
 namespace dice::network {
@@ -31,6 +32,8 @@ bool HostServer::start(uint16_t port) {
     listener_.setBlocking(false);
     isRunning_ = true;
     gameStarted_ = false;
+    lastPingTime_ = std::chrono::steady_clock::now();
+    lastBroadcastTime_ = std::chrono::steady_clock::now();
 
     serverThread_ = std::thread(&HostServer::serverLoop, this);
 
@@ -194,7 +197,12 @@ void HostServer::handleHandshake(const NetworkMessage& msg) {
     broadcast(joined, msg.fromId);
 
     if (gameStarted_) {
-        auto snapshot = NetworkMessage::createSnapshot(model_.toJson());
+        nlohmann::json state;
+        {
+            const std::lock_guard<std::mutex> modelLock(modelMutex_);
+            state = model_.toJson();
+        }
+        auto snapshot = NetworkMessage::createSnapshot(state);
         sendToClient(msg.fromId, snapshot);
     }
 }
@@ -231,17 +239,18 @@ void HostServer::handleEvent(const NetworkMessage& msg) {
         return;
     }
 
-    auto obj = model_.getObject(objectId);
-    if (!obj) {
-        spdlog::warn("Event target object not found: {}", objectId);
-        return;
-    }
-
     spdlog::info("Event from {}: {} on {}", msg.fromId, eventName, objectId);
 
-    actionManager_.saveSnapshot(model_);
-
-    lua_.fireEvent(eventName, obj.get());
+    {
+        const std::lock_guard<std::mutex> modelLock(modelMutex_);
+        auto obj = model_.getObject(objectId);
+        if (!obj) {
+            spdlog::warn("Event target object not found: {}", objectId);
+            return;
+        }
+        actionManager_.saveSnapshot(model_);
+        lua_.fireEvent(eventName, obj.get());
+    }
 
     broadcast(msg);
 }
@@ -260,9 +269,17 @@ void HostServer::handleMoveObject(const NetworkMessage& msg) {
 
     core::MoveObjectAction action(objectId, sf::Vector2f(x, y));
 
-    if (action.canExecute(model_)) {
-        actionManager_.saveSnapshot(model_);
-        action.execute(model_);
+    bool executed = false;
+    {
+        const std::lock_guard<std::mutex> modelLock(modelMutex_);
+        if (action.canExecute(model_)) {
+            actionManager_.saveSnapshot(model_);
+            action.execute(model_);
+            executed = true;
+        }
+    }
+
+    if (executed) {
         broadcast(msg);
     } else {
         spdlog::warn("MoveObject rejected: {} cannot be moved", objectId);
@@ -306,7 +323,7 @@ void HostServer::sendToClient(const std::string& client_id, const NetworkMessage
     }
 
     auto data = msg.serialize();
-    auto status = ctx->socket->send(data.data(), data.size());
+    auto status = sendAll(*ctx->socket, data);
     if (status != sf::Socket::Done) {
         spdlog::warn(
             "Failed to send to client {}, status: {}", client_id, static_cast<int>(status));
@@ -320,7 +337,7 @@ void HostServer::broadcast(const NetworkMessage& msg, const std::string& exclude
     for (const auto& [id, ctx] : clients_) {
         if (id == exclude_id)
             continue;
-        auto status = ctx->socket->send(data.data(), data.size());
+        auto status = sendAll(*ctx->socket, data);
         if (status != sf::Socket::Done) {
             spdlog::warn(
                 "Broadcast failed for client {}, status: {}", id, static_cast<int>(status));
@@ -402,8 +419,12 @@ void HostServer::broadcastMoveObject(const std::string& object_id, float x, floa
 }
 
 void HostServer::broadcastSnapshot() {
-    auto snapshot = NetworkMessage::createSnapshot(model_.toJson());
-    broadcast(snapshot);
+    nlohmann::json state;
+    {
+        const std::lock_guard<std::mutex> modelLock(modelMutex_);
+        state = model_.toJson();
+    }
+    broadcast(NetworkMessage::createSnapshot(state));
 }
 
 void HostServer::startGame() {
