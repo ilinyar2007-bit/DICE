@@ -43,6 +43,7 @@ public:
     }
     std::vector<ClientInfo> getClients() const;
     size_t getClientCount() const {
+        const std::lock_guard<std::mutex> lock(clientsMutex_);
         return clients_.size();
     }
 
