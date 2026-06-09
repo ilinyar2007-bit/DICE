@@ -103,7 +103,7 @@ void HostServer::acceptNewClients() {
         ctx->info.lastPing = std::chrono::steady_clock::now();
 
         {
-            std::lock_guard<std::mutex> lock(clientsMutex_);
+            const std::lock_guard<std::mutex> lock(clientsMutex_);
             clients_[ctx->info.id] = ctx;
         }
 
@@ -118,7 +118,7 @@ void HostServer::acceptNewClients() {
 void HostServer::receiveFromClient(const std::string& client_id) {
     std::shared_ptr<ClientContext> ctx;
     {
-        std::lock_guard<std::mutex> lock(clientsMutex_);
+        const std::lock_guard<std::mutex> lock(clientsMutex_);
         auto it = clients_.find(client_id);
         if (it == clients_.end()) {
             return;
@@ -139,7 +139,7 @@ void HostServer::receiveFromClient(const std::string& client_id) {
             spdlog::debug("Received: {}", msg->toString());
 
             {
-                std::lock_guard<std::mutex> lock(clientsMutex_);
+                const std::lock_guard<std::mutex> lock(clientsMutex_);
                 if (auto it = clients_.find(client_id); it != clients_.end()) {
                     it->second->info.lastPing = std::chrono::steady_clock::now();
                 }
@@ -317,8 +317,9 @@ void HostServer::sendToClient(const std::string& client_id, const NetworkMessage
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
         auto it = clients_.find(client_id);
-        if (it == clients_.end())
+        if (it == clients_.end()) {
             return;
+        }
         ctx = it->second;
     }
 
@@ -335,8 +336,9 @@ void HostServer::broadcast(const NetworkMessage& msg, const std::string& exclude
 
     const std::lock_guard<std::mutex> lock(clientsMutex_);
     for (const auto& [id, ctx] : clients_) {
-        if (id == exclude_id)
+        if (id == exclude_id) {
             continue;
+        }
         auto status = sendAll(*ctx->socket, data);
         if (status != sf::Socket::Done) {
             spdlog::warn(
@@ -397,7 +399,7 @@ void HostServer::checkTimeouts() {
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
         for (const auto& [id, ctx] : clients_) {
-            float elapsed = std::chrono::duration<float>(now - ctx->info.lastPing).count();
+            const float elapsed = std::chrono::duration<float>(now - ctx->info.lastPing).count();
             if (elapsed > timeoutInterval_) {
                 timedOut.push_back(id);
             }
@@ -476,7 +478,7 @@ std::string HostServer::generateId() {
     static std::mutex genMutex;
     static std::uniform_int_distribution<> dis(0, 15);
 
-    std::lock_guard<std::mutex> lock(genMutex);
+    const std::lock_guard<std::mutex> lock(genMutex);
     const std::string hex = "0123456789abcdef";
     std::string id = "client_";
     for (int i = 0; i < 16; ++i) {

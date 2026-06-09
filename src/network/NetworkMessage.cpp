@@ -15,7 +15,7 @@ std::vector<uint8_t> NetworkMessage::serialize() const {
     json["data"] = data;
 
     std::string jsonStr = json.dump();
-    uint32_t length = static_cast<uint32_t>(jsonStr.size());
+    const auto length = static_cast<uint32_t>(jsonStr.size());
 
     std::vector<uint8_t> result;
     result.reserve(4 + length);
@@ -35,8 +35,8 @@ NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
     msg.type = MessageType::Invalid;
 
     try {
-        std::string jsonStr(data.begin(), data.end());
-        nlohmann::json json = nlohmann::json::parse(jsonStr);
+        const std::string jsonStr(data.begin(), data.end());
+        const nlohmann::json json = nlohmann::json::parse(jsonStr);
 
         msg.type = static_cast<MessageType>(json.value("type", 0));
         msg.sequenceId = json.value("seq", 0);
