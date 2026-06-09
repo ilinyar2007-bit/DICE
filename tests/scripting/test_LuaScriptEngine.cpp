@@ -381,3 +381,55 @@ TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsTrueOnSuccess) {
     EXPECT_TRUE(engine_.getGlobalVariable<bool>("global_ok", false));
     fs::remove(tmp);
 }
+
+// ========== moduleCache_ clearing ==========
+
+// moduleCache_ is populated by loadOrGetCachedModule(), which is called from
+// fireBindingRef() when a GameObject has a trigger binding in "filepath:funcname" format.
+// This test verifies that clearSceneState() actually clears the cache by observing
+// that the module file is re-executed (and its load-time side-effect fires again)
+// after the cache is cleared, but NOT fired a second time when the cache is warm.
+TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
+    namespace fs = std::filesystem;
+
+    // Write a Lua module that increments a global counter each time it is
+    // loaded (i.e. each time the file is executed) and returns a table with
+    // a no-op handler.  The counter starts at 0 in the Lua global state
+    // because it has never been set before.
+    const auto mod_path =
+        fs::temp_directory_path() /
+        ("mod_cache_test_" + std::to_string(::getpid()) + ".lua");
+    {
+        std::ofstream f(mod_path);
+        f << "load_count = (load_count or 0) + 1\n"
+          << "return { on_click = function(self) end }\n";
+    }
+
+    // Build the binding reference expected by fireBindingRef: "path:funcname"
+    const std::string binding = mod_path.string() + ":on_click";
+
+    auto obj = std::make_shared<dice::core::GameObject>("obj_cache", "Card");
+    obj->setTriggerBinding("on_click", binding);
+
+    // First fireEvent: cache miss → file executed → load_count becomes 1
+    engine_.fireEvent("on_click", obj.get());
+    EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 1)
+        << "module should be loaded once on first call";
+
+    // Second fireEvent without clearing: cache hit → file NOT re-executed
+    engine_.fireEvent("on_click", obj.get());
+    EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 1)
+        << "cached module must not be re-executed on second call";
+
+    // Clear scene state — this must clear moduleCache_
+    engine_.clearSceneState();
+
+    // Re-attach the binding (clearSceneState also clears scriptRegistry_ /
+    // inline callbacks; the trigger binding lives on the GameObject itself
+    // and is unaffected, so fireEvent can still route through fireBindingRef).
+    engine_.fireEvent("on_click", obj.get());
+    EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 2)
+        << "module must be re-executed after moduleCache_ is cleared";
+
+    fs::remove(mod_path);
+}

@@ -381,6 +381,7 @@ void LuaScriptEngine::clearSceneState() {
     inlineCallbacks_.clear();
     triggerCatalog_.clear();
     keyHandlers_.clear();
+    moduleCache_.clear();
 }
 
 void LuaScriptEngine::fireKeyEvent(const std::string& key_name) {
