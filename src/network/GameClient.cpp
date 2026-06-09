@@ -277,7 +277,7 @@ void GameClient::send(const NetworkMessage& msg) {
     }
     auto data = msg.serialize();
 
-    const  std::lock_guard<std::mutex> lock(socketMutex_);
+    const std::lock_guard<std::mutex> lock(socketMutex_);
     auto status = socket_.send(data.data(), data.size());
 
     if (status != sf::Socket::Done) {

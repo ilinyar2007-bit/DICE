@@ -55,10 +55,13 @@ public:
 
 private:
     void registerLuaBindings();
+    void cleanupGameClient()
 
-    core::Model& model_;
+        core::Model& model_;
     core::ActionManager& actionManager_;
     scripting::LuaScriptEngine& lua_;
+
+    std::atomic<bool> pendingClientCleanup_{false};
 
     std::unique_ptr<HostServer> hostServer_;
     std::unique_ptr<GameClient> gameClient_;

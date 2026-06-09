@@ -26,7 +26,8 @@ enum class MessageType : uint8_t {
     Snapshot,
     Event,
     MoveObject,
-    Chat
+    Chat,
+    Invalid = 255
 };
 
 enum class PlayerStatus : uint8_t { Connecting = 0, Connected, Ready, InGame, Disconnected };

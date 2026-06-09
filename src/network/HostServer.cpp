@@ -46,14 +46,14 @@ void HostServer::stop() {
     }
     isRunning_ = false;
     listener_.close();
-
-    const std::lock_guard<std::mutex> lock(clientsMutex_);
-    for (auto& [id, socket] : clients_) {
-        socket->disconnect();
+    {
+        const std::lock_guard<std::mutex> lock(clientsMutex_);
+        for (auto& [id, socket] : clients_) {
+            socket->disconnect();
+        }
+        clients_.clear();
+        clientInfos_.clear();
     }
-    clients_.clear();
-    clientInfos_.clear();
-
     if (serverThread_.joinable()) {
         serverThread_.join();
     }

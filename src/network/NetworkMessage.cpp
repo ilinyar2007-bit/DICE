@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include <spdlog/spdlog.h>
+
 namespace dice::network {
 
 std::vector<uint8_t> NetworkMessage::serialize() const {
@@ -18,6 +20,8 @@ std::vector<uint8_t> NetworkMessage::serialize() const {
 
 NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
     NetworkMessage msg;
+    msg.type = MessageType::Invalid;
+
     try {
         const std::string str(data.begin(), data.end());
         const nlohmann::json json = nlohmann::json::parse(str);
@@ -27,8 +31,12 @@ NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
         msg.timestamp = json.value("ts", 0);
         msg.fromId = json.value("from", "");
         msg.data = json.value("data", nlohmann::json::object());
+    } catch (const nlohmann::json::parse_error& e) {
+        spdlog::error("JSON parse error: {}", e.what());
+        spdlog::error("Raw data (first 100 bytes): {}",
+                      std::string(data.begin(), data.begin() + std::min(data.size(), size_t(100))));
     } catch (const std::exception& e) {
-        msg.type = MessageType::Disconnect;
+        spdlog::error("Deserialize error: {}", e.what());
     }
     return msg;
 }

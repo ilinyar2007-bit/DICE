@@ -82,7 +82,7 @@ bool NetworkManager::joinGame(const std::string& host_ip,
 
     gameClient_->setOnDisconnected([this]() {
         role_ = NetworkRole::SinglePlayer;
-        gameClient_.reset();
+        pendingClientCleanup_ = true;
         if (onPlayerLeft_) {
             onPlayerLeft_("");
         }
@@ -126,6 +126,13 @@ bool NetworkManager::joinGame(const std::string& host_ip,
     role_ = NetworkRole::Client;
     spdlog::info("Joined game as client");
     return true;
+}
+
+void NetworkManager::cleanupGameClient() {
+    if (pendingClientCleanup_ && gameClient_) {
+        gameClient_.reset();
+        pendingClientCleanup_ = false;
+    }
 }
 
 void NetworkManager::leaveGame() {
@@ -235,6 +242,7 @@ std::vector<ClientInfo> NetworkManager::getPlayers() const {
 }
 
 void NetworkManager::update() {
+    cleanupGameClient();
     if (hostServer_) {
         hostServer_->update();
     }
