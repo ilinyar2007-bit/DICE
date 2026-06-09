@@ -51,6 +51,10 @@ private:
     void refreshFieldBounds();
     void loadTexturesForModel();
 
+    int luaDiceRoll(const std::string& id);
+    std::string luaDeckDraw(const std::string& deck_id);
+    void luaSetObjTexture(const std::string& obj_id, const std::string& path);
+
     dice::core::Model& model_;
     dice::view::View& view_;
     dice::scripting::LuaScriptEngine& lua_;

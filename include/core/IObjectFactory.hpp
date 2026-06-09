@@ -13,6 +13,9 @@ enum class ObjectType : std::uint8_t {
     GAME_OBJECT,
     CHIP,
     CARD,
+    DICE,
+    TILE,
+    DECK,
 };
 
 inline ObjectType objectTypeFromString(const std::string& s) {
@@ -20,6 +23,12 @@ inline ObjectType objectTypeFromString(const std::string& s) {
         return ObjectType::CHIP;
     if (s == "Card")
         return ObjectType::CARD;
+    if (s == "Dice")
+        return ObjectType::DICE;
+    if (s == "Tile")
+        return ObjectType::TILE;
+    if (s == "Deck")
+        return ObjectType::DECK;
     return ObjectType::GAME_OBJECT;
 }
 

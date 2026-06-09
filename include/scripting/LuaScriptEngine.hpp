@@ -150,11 +150,13 @@ private:
 
     void initLibraries();
     void registerGameObjectType();
+    void registerComponentTypes();
     void registerStandardCallbacks();
     void registerEngineTable();
     sol::environment makeEnvironment();
     sol::table loadOrGetCachedModule(const std::string& filepath);
     bool fireBindingRef(const std::string& ref, dice::core::GameObject* obj);
+    sol::object toSolObject(dice::core::GameObject* obj);
 };
 
 } // namespace dice::scripting

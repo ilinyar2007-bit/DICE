@@ -4,7 +4,7 @@
 
 DICE следует паттерну MVC, расширенному слоями скриптинга и управления ресурсами.
 
-**Иерархия объектов:** классическое C++ наследование — `Card` и `Chip` наследуются от `GameObject`, который наследует `sf::Drawable` и `sf::Transformable`. Дочерние объекты хранятся в `vector<shared_ptr<GameObject>>` (shared ownership); обратная ссылка на родителя — сырой non-owning указатель `GameObject*`. `Model` содержит плоский `unordered_map<string, shared_ptr<GameObject>>` для поиска по id за O(1) и список корней. ECS и непрерывных массивов нет — объекты размещаются в куче через `shared_ptr`.
+**Иерархия объектов:** классическое C++ наследование — `Card`, `Chip`, `Dice`, `Tile`, `Deck` наследуются от `GameObject`, который наследует `sf::Drawable` и `sf::Transformable`. Дочерние объекты хранятся в `vector<shared_ptr<GameObject>>` (shared ownership); обратная ссылка на родителя — сырой non-owning указатель `GameObject*`. `Model` содержит плоский `unordered_map<string, shared_ptr<GameObject>>` для поиска по id за O(1) и список корней. ECS и непрерывных массивов нет — объекты размещаются в куче через `shared_ptr`.
 
 **Жизненный цикл объектов:** `shared_ptr` одновременно хранится в `children` родителя и в плоской карте `Model::objects_`. Для полного уничтожения объекта используй `Model::removeObject(id)` — он удаляет ссылку из обоих мест. Прямой вызов `parent->removeChild(id)` оставит объект живым в карте модели.
 
@@ -23,6 +23,9 @@ DICE следует паттерну MVC, расширенному слоями 
 | `ResourceManager` | Типизированный кэш ресурсов (текстуры, шрифты) | `dice::core` |
 | `GameObject` | Базовый узел: позиция, текстура, дети, триггеры | `dice::core` |
 | `Card` / `Chip` | Специализированные подтипы `GameObject` | `dice::components` |
+| `Dice` | Кубик: количество граней, текущее значение, текстуры граней, `roll()` | `dice::components` |
+| `Tile` | Клетка сетки: координаты col/row, occupant, фильтр принимаемых типов | `dice::components` |
+| `Deck` | Колода: `faceDown`, управляет Card-дочерьми | `dice::components` |
 | `Action` / `ActionManager` | Снепшоты модели, undo/redo *(реализовано в core, не подключено к приложению)* | `dice::core` |
 
 ---
@@ -139,6 +142,9 @@ sequenceDiagram
 | `cpp_draw_rect` | `(x, y, w, h, r, g, b, a)` | O(1) | Закрашенный прямоугольник |
 | `cpp_set_obj_color` | `(id, r, g, b, a)` | O(1) avg | Задать цвет объекту по id |
 | `cpp_set_obj_texture` | `(id, path)` | O(1) avg | Сменить текстуру объекту по id |
+| `cpp_dice_roll` | `(id: string) → int` | O(1) avg | Бросить кубик: случайное значение в [1, faceCount], применить текстуру грани, вернуть значение |
+| `cpp_deck_draw` | `(id: string) → string` | O(1) avg | Снять верхнюю карту с колоды, поднять её до корня сцены, вернуть её id (пусто — если колода пуста) |
+| `cpp_deck_count` | `(id: string) → int` | O(1) avg | Количество карт в колоде |
 | `cpp_log` | `(msg: string)` | O(1) | Лог через spdlog; поддерживает UI-коллбэк. Используется в примерах |
 | `log` | `(msg: string)` | O(1) | Лог через spdlog (только вывод, без коллбэка) |
 
@@ -164,7 +170,7 @@ sequenceDiagram
 |-------|----------|
 | `self:getId()` | Строковый id объекта |
 | `self:getName()` / `self:setName(s)` | Имя объекта |
-| `self:getType()` | Строка типа (`"GameObject"`, `"Card"`, `"Chip"`) |
+| `self:getType()` | Строка типа (`"GameObject"`, `"Card"`, `"Chip"`, `"Dice"`, `"Tile"`, `"Deck"`) |
 | `self:getX()` / `self:getY()` | Позиция объекта |
 | `self:setPosition(x, y)` | Задать позицию |
 | `self:getZOrder()` / `self:setZOrder(z)` | Порядок слоёв |
@@ -172,6 +178,7 @@ sequenceDiagram
 | `self:getScaleX()` / `self:getScaleY()` / `self:setScale(x, y)` | Масштаб |
 | `self:isVisible()` / `self:setVisible(bool)` | Видимость |
 | `self:isActive()` / `self:setActive(bool)` | Активность (включая дочерние события) |
+| `self:isDraggable()` / `self:setDraggable(bool)` | Перетаскиваемость |
 | `self:setColor(r, g, b, a)` | Цвет (RGBA, 0–255) |
 | `self:getIntProperty(key, default)` | Читать int-свойство из `properties` |
 | `self:getFloatProperty(key, default)` | Читать float-свойство |
@@ -180,6 +187,20 @@ sequenceDiagram
 | `self:setIntProperty(key, val)` | Задать int-свойство |
 | `self:setStringProperty(key, val)` | Задать string-свойство |
 | `self:hasTag(tag)` / `self:getTags()` | Проверить/получить теги объекта |
+
+`engine.getObject(id)` возвращает конкретный тип — если объект является `Card`, `Chip` и т.д., Lua получает именно этот тип и может вызывать его методы.
+
+### Методы подтипов (доступны через `self` или объект из `engine.getObject`)
+
+**Card:** `flip()`, `isFaceUp()`, `setFaceUp(bool)`, `setPlayer(int)`, `getPlayer()`
+
+**Chip:** `getRadius()`, `setRadius(float)`, `getAssetId()`, `setAssetId(string)`, `setPlayer(int)`, `getPlayer()`
+
+**Dice:** `getFaceCount()`, `getValue()` — для броска используй `cpp_dice_roll(id)`
+
+**Tile:** `getCol()`, `getRow()`, `getOccupantId()`, `setOccupant(string)`, `clearOccupant()`, `isOccupied()`, `accepts(string)`
+
+**Deck:** `isFaceDown()`, `count()`, `isEmpty()` — для операций с картами используй `cpp_deck_draw(id)`, `cpp_deck_count(id)`, `cpp_shuffle_children(id)`
 
 ### События (имена триггеров)
 

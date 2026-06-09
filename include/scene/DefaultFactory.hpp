@@ -5,6 +5,9 @@
 
 #include "components/Card.hpp"
 #include "components/Chip.hpp"
+#include "components/Deck.hpp"
+#include "components/Dice.hpp"
+#include "components/Tile.hpp"
 #include "core/IObjectFactory.hpp"
 
 namespace dice::scene {
@@ -18,6 +21,12 @@ public:
                 return std::make_shared<dice::components::Chip>(id, name);
             case dice::core::ObjectType::CARD:
                 return std::make_shared<dice::components::Card>(id, name);
+            case dice::core::ObjectType::DICE:
+                return std::make_shared<dice::components::Dice>(id, name);
+            case dice::core::ObjectType::TILE:
+                return std::make_shared<dice::components::Tile>(id, name);
+            case dice::core::ObjectType::DECK:
+                return std::make_shared<dice::components::Deck>(id, name);
             default:
                 return std::make_shared<dice::core::GameObject>(id, name);
         }
