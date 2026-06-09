@@ -97,6 +97,7 @@ private:
 
     std::thread serverThread_;
     mutable std::mutex clientsMutex_;
+    mutable std::mutex modelMutex_;
 
     std::chrono::steady_clock::time_point lastBroadcastTime_;
     std::chrono::steady_clock::time_point lastPingTime_;
