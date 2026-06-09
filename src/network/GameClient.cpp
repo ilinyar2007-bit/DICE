@@ -77,10 +77,10 @@ void GameClient::receiveLoop() {
     while (running_ && isConnected_) {
         if (selector.wait(sf::milliseconds(100))) {
             std::size_t received = 0;
-            sf::Socket::Status status;
+            sf::Socket::Status status = sf::Socket::NotReady;
 
             {
-                std::lock_guard<std::mutex> lock(socketMutex_);
+                const std::lock_guard<std::mutex> lock(socketMutex_);
                 status = socket_.receive(chunk.data(), chunk.size(), received);
             }
 
