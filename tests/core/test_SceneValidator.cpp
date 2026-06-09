@@ -457,8 +457,9 @@ TEST(SceneValidatorTest, DuplicateIdInChildOfRootDetected) {
     validator.validate(scene, "test.json");
     bool found = false;
     for (const auto& e : validator.errors()) {
-        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID)
+        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID) {
             found = true;
+        }
     }
     EXPECT_TRUE(found);
 }
@@ -479,8 +480,9 @@ TEST(SceneValidatorTest, DuplicateIdAcrossTwoChildSubtreesDetected) {
     validator.validate(scene, "test.json");
     bool found = false;
     for (const auto& e : validator.errors()) {
-        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID)
+        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID) {
             found = true;
+        }
     }
     EXPECT_TRUE(found);
 }
