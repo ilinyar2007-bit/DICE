@@ -1,11 +1,18 @@
 #include <filesystem>
 #include <fstream>
+#include <string>
+
+#ifdef _WIN32
+#include <process.h>
+#define getpid _getpid
+#else
+#include <unistd.h>
+#endif
 
 #include "core/GameObject.hpp"
 #include "scripting/LuaScript.hpp"
 #include "scripting/LuaScriptEngine.hpp"
 #include <gtest/gtest.h>
-#include <unistd.h>
 
 using dice::core::GameObject;
 using dice::scripting::LuaScriptEngine;
