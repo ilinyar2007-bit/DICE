@@ -43,11 +43,11 @@ std::string keyToString(sf::Keyboard::Key key) {
     return it != kKeyNames.end() ? std::string{it->second} : std::string{};
 }
 
-bool executeSceneScripts(const nlohmann::json& sceneJson, dice::scripting::LuaScriptEngine& lua) {
-    if (!sceneJson.contains("scripts") || !sceneJson["scripts"].is_array()) {
+bool executeSceneScripts(const nlohmann::json& scene_json, dice::scripting::LuaScriptEngine& lua) {
+    if (!scene_json.contains("scripts") || !scene_json["scripts"].is_array()) {
         return true;
     }
-    for (const auto& entry : sceneJson["scripts"]) {
+    for (const auto& entry : scene_json["scripts"]) {
         if (entry.is_string()) {
             const auto script = entry.get<std::string>();
             if (!lua.executeGlobalScript(script)) {
