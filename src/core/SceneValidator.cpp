@@ -330,6 +330,14 @@ void SceneValidator::checkScripts(const nlohmann::json& scene_json) {
             addError(MessageCode::E_SCRIPTS_ENTRY_IS_NOT_A_STRING,
                      "each 'scripts' entry must be a string",
                      entry);
+            continue;
+        }
+        const auto& script_path = entry.get<std::string>();
+        if (!script_path.empty() &&
+            !std::filesystem::exists(scene_directory_ / script_path)) {
+            addWarning(MessageCode::W_SCRIPT_FILE_NOT_FOUND,
+                       "Script file not found: " + script_path,
+                       scene_json);
         }
     }
 }

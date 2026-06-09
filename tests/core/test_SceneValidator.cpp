@@ -525,3 +525,19 @@ TEST(SceneValidatorTest, RecursiveObjectValidation) {
     }
     EXPECT_TRUE(found);
 }
+
+// ========== Script file existence checks ==========
+
+TEST(SceneValidatorTest, SceneScriptFileNotFoundEmitsWarning) {
+    auto scene = makeValidScene();
+    scene["scripts"] = nlohmann::json::array({"nonexistent_xyz_script.lua"});
+    dice::core::SceneValidator validator;
+    validator.validate(scene, "scenes/test.json");
+    bool found = false;
+    for (const auto& w : validator.warnings()) {
+        if (w.code_ == dice::core::MessageCode::W_SCRIPT_FILE_NOT_FOUND) {
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found);
+}
