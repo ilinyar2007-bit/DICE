@@ -34,7 +34,9 @@ NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
     } catch (const nlohmann::json::parse_error& e) {
         spdlog::error("JSON parse error: {}", e.what());
         spdlog::error("Raw data (first 100 bytes): {}",
-                      std::string(data.begin(), data.begin() + std::min(data.size(), size_t(100))));
+                      std::string(data.begin(),
+                                  data.begin() + static_cast<std::ptrdiff_t>(std::min(
+                                                     data.size(), static_cast<size_t>(100)))));
     } catch (const std::exception& e) {
         spdlog::error("Deserialize error: {}", e.what());
     }
