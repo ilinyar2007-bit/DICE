@@ -150,19 +150,28 @@ void SceneValidator::checkRequiredFields(const nlohmann::json& obj) {
 
 void SceneValidator::checkDuplicateIds(const nlohmann::json& scene_json) {
     std::unordered_set<std::string> ids;
+    std::vector<const nlohmann::json*> pending;
 
     for (const auto& obj : scene_json["objects"]) {
-        auto id = tryGetId(obj);
+        pending.push_back(&obj);
+    }
 
-        if (!id.has_value()) {
-            continue;
+    while (!pending.empty()) {
+        const auto* obj = pending.back();
+        pending.pop_back();
+
+        if (auto id = tryGetId(*obj); id.has_value()) {
+            if (ids.contains(id.value())) {
+                addError(MessageCode::E_DUPLICATE_ID, "Duplicate object id", *obj);
+            }
+            ids.insert(id.value());
         }
 
-        if (ids.contains(id.value())) {
-            addError(MessageCode::E_DUPLICATE_ID, "Duplicate object id", obj);
+        if (obj->is_object() && obj->contains("children") && (*obj)["children"].is_array()) {
+            for (const auto& child : (*obj)["children"]) {
+                pending.push_back(&child);
+            }
         }
-
-        ids.insert(id.value());
     }
 }
 
@@ -321,6 +330,13 @@ void SceneValidator::checkScripts(const nlohmann::json& scene_json) {
             addError(MessageCode::E_SCRIPTS_ENTRY_IS_NOT_A_STRING,
                      "each 'scripts' entry must be a string",
                      entry);
+            continue;
+        }
+        const auto& script_path = entry.get<std::string>();
+        if (!script_path.empty() && !std::filesystem::exists(scene_directory_ / script_path)) {
+            addWarning(MessageCode::W_SCRIPT_FILE_NOT_FOUND,
+                       "Script file not found: " + script_path,
+                       scene_json);
         }
     }
 }

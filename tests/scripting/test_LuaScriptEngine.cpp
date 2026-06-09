@@ -1,7 +1,11 @@
+#include <filesystem>
+#include <fstream>
+
 #include "core/GameObject.hpp"
 #include "scripting/LuaScript.hpp"
 #include "scripting/LuaScriptEngine.hpp"
 #include <gtest/gtest.h>
+#include <unistd.h>
 
 using dice::core::GameObject;
 using dice::scripting::LuaScriptEngine;
@@ -239,7 +243,6 @@ TEST_F(LuaScriptEngineTest, FireEventNullObjectReturnsFalse) {
 TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
     dice::scripting::LuaScriptEngine engine;
 
-    // Register a trigger named "roll_dice" that sets a global flag
     engine.executeGlobalScriptFromSource(R"(
         called = false
         engine.trigger("roll_dice", function(obj)
@@ -247,13 +250,11 @@ TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
         end)
     )");
 
-    // Create a GameObject with a trigger binding
     auto obj = std::make_shared<dice::core::GameObject>("die1", "Die");
     obj->setTriggerBinding("on_click", "roll_dice");
 
     engine.fireEvent("on_click", obj.get());
 
-    // Verify trigger was called
     const bool called = engine.getGlobalVariable<bool>("called");
     EXPECT_TRUE(called);
 }
@@ -297,8 +298,6 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
     )");
 
     engine.clearSceneState();
-
-    // After clear, trigger should not fire (no crash, just returns false)
     auto obj = std::make_shared<dice::core::GameObject>("obj1", "Card");
     obj->setTriggerBinding("on_click", "my_trigger");
     const bool fired = engine.fireEvent("on_click", obj.get());
@@ -308,7 +307,7 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
 // ========== Memory limit ==========
 
 TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
-    engine_.setMemoryLimit(size_t{1} * 1024 * 1024); // 1 MB
+    engine_.setMemoryLimit(size_t{1} * 1024 * 1024);
     const std::string src = R"(
         local t = {}
         for i = 1, 10000000 do t[i] = i end
@@ -317,6 +316,107 @@ TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
 }
 
 TEST_F(LuaScriptEngineTest, MemoryLimitAllowsNormalScript) {
-    engine_.setMemoryLimit(size_t{64} * 1024 * 1024); // 64 MB
+    engine_.setMemoryLimit(size_t{64} * 1024 * 1024);
     EXPECT_TRUE(engine_.executeGlobalScriptFromSource("local x = 42"));
+}
+
+TEST_F(LuaScriptEngineTest, MemoryLimitAllowsShrinkingTable) {
+    engine_.setMemoryLimit(size_t{16} * 1024 * 1024);
+    ASSERT_TRUE(engine_.executeGlobalScriptFromSource(R"(
+        local t = {}
+        for i = 1, 200 do t[i] = i end
+        for i = 101, 200 do t[i] = nil end
+        collectgarbage("collect")
+        result = t[1]
+    )"));
+    EXPECT_EQ(engine_.getGlobalVariable<int>("result", -1), 1);
+}
+
+TEST_F(LuaScriptEngineTest, MemoryLimitGCAfterSetDoesNotCrash) {
+    const size_t limit = 32UL * 1024 * 1024;
+    engine_.executeGlobalScriptFromSource(R"(
+        local garbage = {}
+        for i = 1, 20 do garbage[i] = string.rep("x", i * 10) end
+    )");
+    engine_.setMemoryLimit(limit);
+    engine_.executeGlobalScriptFromSource("collectgarbage('collect')");
+    EXPECT_LT(engine_.getMemoryUsed(), limit);
+    ASSERT_TRUE(engine_.executeGlobalScriptFromSource(R"(
+        local t = {}
+        for i = 1, 100 do t[i] = i end
+        ok = t[1] == 1
+    )"));
+    EXPECT_TRUE(engine_.getGlobalVariable<bool>("ok", false));
+}
+
+TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsFalseOnSyntaxError) {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path() / ("bad_script_" + std::to_string(::getpid()) + ".lua");
+    {
+        std::ofstream f(tmp);
+        f << "@@@not valid lua";
+    }
+    EXPECT_FALSE(engine_.executeGlobalScript(tmp));
+    fs::remove(tmp);
+}
+
+TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsTrueOnSuccess) {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path() / ("good_script_" + std::to_string(::getpid()) + ".lua");
+    {
+        std::ofstream f(tmp);
+        f << "global_ok = true";
+    }
+    EXPECT_TRUE(engine_.executeGlobalScript(tmp));
+    EXPECT_TRUE(engine_.getGlobalVariable<bool>("global_ok", false));
+    fs::remove(tmp);
+}
+
+// ========== moduleCache_ clearing ==========
+
+TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
+    namespace fs = std::filesystem;
+
+    const auto mod_path =
+        fs::temp_directory_path() / ("mod_cache_test_" + std::to_string(::getpid()) + ".lua");
+    {
+        std::ofstream f(mod_path);
+        f << "load_count = (load_count or 0) + 1\n"
+          << "return { on_click = function(self) end }\n";
+    }
+
+    const std::string binding = mod_path.string() + ":on_click";
+
+    auto obj = std::make_shared<dice::core::GameObject>("obj_cache", "Card");
+    obj->setTriggerBinding("on_click", binding);
+
+    engine_.fireEvent("on_click", obj.get());
+    EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 1)
+        << "module should be loaded once on first call";
+
+    engine_.fireEvent("on_click", obj.get());
+    EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 1)
+        << "cached module must not be re-executed on second call";
+
+    engine_.clearSceneState();
+
+    engine_.fireEvent("on_click", obj.get());
+    EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 2)
+        << "module must be re-executed after moduleCache_ is cleared";
+
+    fs::remove(mod_path);
+}
+
+// ========== getGlobalVariable type safety ==========
+
+TEST_F(LuaScriptEngineTest, GetGlobalVariableWrongTypeReturnsDefault) {
+    engine_.executeGlobalScriptFromSource(R"(flag = "yes")");
+    bool result = true;
+    EXPECT_NO_THROW({ result = engine_.getGlobalVariable<bool>("flag", false); });
+    EXPECT_EQ(result, false);
+}
+
+TEST_F(LuaScriptEngineTest, GetGlobalVariableCorrectTypeReturnsValue) {
+    engine_.executeGlobalScriptFromSource("score = 99");
+    EXPECT_EQ(engine_.getGlobalVariable<int>("score", 0), 99);
 }

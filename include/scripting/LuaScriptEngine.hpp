@@ -84,10 +84,14 @@ public:
     template <typename T>
     T getGlobalVariable(const std::string& name, const T& default_value = T()) {
         auto val = lua_[name];
-        if (val.valid()) {
-            return val.get<T>();
+        if (!val.valid()) {
+            return default_value;
         }
-        return default_value;
+        if (!val.is<T>()) {
+            spdlog::warn("LuaScriptEngine::getGlobalVariable: '{}' has unexpected type", name);
+            return default_value;
+        }
+        return val.get<T>();
     }
 
     bool hasGlobalVariable(const std::string& name) {
