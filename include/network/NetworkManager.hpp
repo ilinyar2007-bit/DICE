@@ -55,9 +55,9 @@ public:
 
 private:
     void registerLuaBindings();
-    void cleanupGameClient()
+    void cleanupGameClient();
 
-        core::Model& model_;
+    core::Model& model_;
     core::ActionManager& actionManager_;
     scripting::LuaScriptEngine& lua_;
 
