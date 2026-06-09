@@ -1,8 +1,7 @@
 #include "network/GameClient.hpp"
 
-#include <spdlog/spdlog.h>
-
 #include "network/SocketUtils.hpp"
+#include <spdlog/spdlog.h>
 
 namespace dice::network {
 

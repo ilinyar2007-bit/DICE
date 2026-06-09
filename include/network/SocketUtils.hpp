@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+
 #include <SFML/Network.hpp>
 
 namespace dice::network {
