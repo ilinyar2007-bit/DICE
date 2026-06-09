@@ -445,6 +445,48 @@ TEST(SceneValidatorTriggers, TriggersNotObject) {
     EXPECT_TRUE(v.hasErrors());
 }
 
+// ========== checkDuplicateIds ==========
+
+TEST(SceneValidatorTest, DuplicateIdInChildOfRootDetected) {
+    auto scene = makeValidScene();
+    scene["objects"] = nlohmann::json::array({nlohmann::json{
+        {"id", "root1"},
+        {"type", "GameObject"},
+        {"children", nlohmann::json::array({{{"id", "root1"}, {"type", "GameObject"}}})}}});
+    dice::core::SceneValidator validator;
+    validator.validate(scene, "test.json");
+    bool found = false;
+    for (const auto& e : validator.errors()) {
+        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID) {
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(SceneValidatorTest, DuplicateIdAcrossTwoChildSubtreesDetected) {
+    auto scene = makeValidScene();
+    scene["objects"] = nlohmann::json::array({
+        nlohmann::json{
+            {"id", "a"},
+            {"type", "GameObject"},
+            {"children", nlohmann::json::array({{{"id", "dup"}, {"type", "GameObject"}}})}},
+        nlohmann::json{
+            {"id", "b"},
+            {"type", "GameObject"},
+            {"children", nlohmann::json::array({{{"id", "dup"}, {"type", "GameObject"}}})}},
+    });
+    dice::core::SceneValidator validator;
+    validator.validate(scene, "test.json");
+    bool found = false;
+    for (const auto& e : validator.errors()) {
+        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID) {
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
 // ========== State reset ==========
 
 TEST(SceneValidatorTest, ValidatorClearsStateBetweenValidations) {
@@ -483,6 +525,22 @@ TEST(SceneValidatorTest, RecursiveObjectValidation) {
         if (e.code_ == MessageCode::E_ID_IS_NOT_A_STRING) {
             found = true;
             break;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+// ========== Script file existence checks ==========
+
+TEST(SceneValidatorTest, SceneScriptFileNotFoundEmitsWarning) {
+    auto scene = makeValidScene();
+    scene["scripts"] = nlohmann::json::array({"nonexistent_xyz_script.lua"});
+    dice::core::SceneValidator validator;
+    validator.validate(scene, "scenes/test.json");
+    bool found = false;
+    for (const auto& w : validator.warnings()) {
+        if (w.code_ == dice::core::MessageCode::W_SCRIPT_FILE_NOT_FOUND) {
+            found = true;
         }
     }
     EXPECT_TRUE(found);

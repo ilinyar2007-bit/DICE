@@ -16,8 +16,10 @@ bool ActionManager::undo(Model& model) {
     if (undoStack_.empty()) {
         return false;
     }
-    redoStack_.push_back(model.toJson());
-    model.fromJson(undoStack_.back());
+    auto current_snapshot = model.toJson();
+    auto target = undoStack_.back(); // copy before pop in case fromJson throws
+    model.fromJson(target);
+    redoStack_.push_back(std::move(current_snapshot));
     undoStack_.pop_back();
     spdlog::debug("Undo: undo={}, redo={}", undoStack_.size(), redoStack_.size());
     return true;
@@ -27,8 +29,10 @@ bool ActionManager::redo(Model& model) {
     if (redoStack_.empty()) {
         return false;
     }
-    undoStack_.push_back(model.toJson());
-    model.fromJson(redoStack_.back());
+    auto current_snapshot = model.toJson();
+    auto target = redoStack_.back(); // copy before pop in case fromJson throws
+    model.fromJson(target);
+    undoStack_.push_back(std::move(current_snapshot));
     redoStack_.pop_back();
     spdlog::debug("Redo: undo={}, redo={}", undoStack_.size(), redoStack_.size());
     return true;

@@ -90,6 +90,10 @@ public:
         return resources_.empty();
     }
 
+    bool contains(const std::string& id) const {
+        return resources_.find(id) != resources_.end();
+    }
+
     // ========== Set fallback resource ==========
     void setFallback(std::shared_ptr<Resource> fallback) {
         fallback_ = std::move(fallback);
