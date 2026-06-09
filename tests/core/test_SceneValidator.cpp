@@ -445,6 +445,44 @@ TEST(SceneValidatorTriggers, TriggersNotObject) {
     EXPECT_TRUE(v.hasErrors());
 }
 
+// ========== checkDuplicateIds ==========
+
+TEST(SceneValidatorTest, DuplicateIdInChildOfRootDetected) {
+    auto scene = makeValidScene();
+    scene["objects"] = nlohmann::json::array({
+        nlohmann::json{
+            {"id", "root1"}, {"type", "GameObject"},
+            {"children", nlohmann::json::array({
+                {{"id", "root1"}, {"type", "GameObject"}}
+            })}
+        }
+    });
+    dice::core::SceneValidator validator;
+    validator.validate(scene, "test.json");
+    bool found = false;
+    for (const auto& e : validator.errors()) {
+        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID) found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(SceneValidatorTest, DuplicateIdAcrossTwoChildSubtreesDetected) {
+    auto scene = makeValidScene();
+    scene["objects"] = nlohmann::json::array({
+        nlohmann::json{{"id", "a"}, {"type", "GameObject"},
+            {"children", nlohmann::json::array({{{"id", "dup"}, {"type", "GameObject"}}})}},
+        nlohmann::json{{"id", "b"}, {"type", "GameObject"},
+            {"children", nlohmann::json::array({{{"id", "dup"}, {"type", "GameObject"}}})}},
+    });
+    dice::core::SceneValidator validator;
+    validator.validate(scene, "test.json");
+    bool found = false;
+    for (const auto& e : validator.errors()) {
+        if (e.code_ == dice::core::MessageCode::E_DUPLICATE_ID) found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
 // ========== State reset ==========
 
 TEST(SceneValidatorTest, ValidatorClearsStateBetweenValidations) {
