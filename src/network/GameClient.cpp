@@ -258,7 +258,7 @@ void GameClient::sendMoveObject(const std::string& object_id, float x, float y) 
 void GameClient::sendReady() {
     std::string id;
     {
-        std::lock_guard<std::mutex> lock(clientIdMutex_);
+        const std::lock_guard<std::mutex> lock(clientIdMutex_);
         id = clientId_;
     }
     auto ready = NetworkMessage::createPlayerReady(id);
@@ -277,7 +277,7 @@ void GameClient::send(const NetworkMessage& msg) {
     }
     auto data = msg.serialize();
 
-    std::lock_guard<std::mutex> lock(socketMutex_);
+    const  std::lock_guard<std::mutex> lock(socketMutex_);
     auto status = socket_.send(data.data(), data.size());
 
     if (status != sf::Socket::Done) {
