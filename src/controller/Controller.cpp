@@ -110,7 +110,11 @@ bool Controller::loadScene(const std::filesystem::path& path) {
     if (sceneJson.contains("scripts") && sceneJson["scripts"].is_array()) {
         for (const auto& entry : sceneJson["scripts"]) {
             if (entry.is_string()) {
-                lua_.executeGlobalScript(entry.get<std::string>());
+                if (!lua_.executeGlobalScript(entry.get<std::string>())) {
+                    spdlog::error("Controller: scene script failed, aborting scene load: {}",
+                                  entry.get<std::string>());
+                    return false;
+                }
             }
         }
     }

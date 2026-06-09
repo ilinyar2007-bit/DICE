@@ -1,7 +1,10 @@
 #include "core/GameObject.hpp"
 #include "scripting/LuaScript.hpp"
 #include "scripting/LuaScriptEngine.hpp"
+#include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
+#include <unistd.h>
 
 using dice::core::GameObject;
 using dice::scripting::LuaScriptEngine;
@@ -360,4 +363,21 @@ TEST_F(LuaScriptEngineTest, MemoryLimitGCAfterSetDoesNotCrash) {
         ok = t[1] == 1
     )"));
     EXPECT_TRUE(engine_.getGlobalVariable<bool>("ok", false));
+}
+
+TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsFalseOnSyntaxError) {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path() / ("bad_script_" + std::to_string(::getpid()) + ".lua");
+    { std::ofstream f(tmp); f << "@@@not valid lua"; }
+    EXPECT_FALSE(engine_.executeGlobalScript(tmp));
+    fs::remove(tmp);
+}
+
+TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsTrueOnSuccess) {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path() / ("good_script_" + std::to_string(::getpid()) + ".lua");
+    { std::ofstream f(tmp); f << "global_ok = true"; }
+    EXPECT_TRUE(engine_.executeGlobalScript(tmp));
+    EXPECT_TRUE(engine_.getGlobalVariable<bool>("global_ok", false));
+    fs::remove(tmp);
 }
