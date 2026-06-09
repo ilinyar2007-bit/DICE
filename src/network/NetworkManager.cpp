@@ -144,6 +144,7 @@ void NetworkManager::leaveGame() {
     if (gameClient_) {
         gameClient_->disconnect();
         gameClient_.reset();
+        pendingClientCleanup_ = false;
     }
 
     role_ = NetworkRole::SinglePlayer;
