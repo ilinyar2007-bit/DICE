@@ -376,7 +376,7 @@ TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsTrueOnSuccess) {
 
 TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
     namespace fs = std::filesystem;
-    
+
     const auto mod_path =
         fs::temp_directory_path() / ("mod_cache_test_" + std::to_string(::getpid()) + ".lua");
     {
