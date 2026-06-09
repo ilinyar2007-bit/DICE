@@ -143,7 +143,12 @@ void Controller::loadTexturesForModel() {
         if (!tf.empty()) {
             if (!loadedTextureIds_.contains(tf)) {
                 textures_.load(tf, tf);
-                loadedTextureIds_.insert(tf);
+                // Only mark as loaded if the resource was actually stored in the manager
+                if (textures_.contains(tf)) {
+                    loadedTextureIds_.insert(tf);
+                } else {
+                    spdlog::warn("Controller: failed to load texture '{}'", tf);
+                }
             }
             obj->setTexture(textures_.get(tf).get());
         }
