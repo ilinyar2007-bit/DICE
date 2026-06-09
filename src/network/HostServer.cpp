@@ -2,7 +2,6 @@
 
 #include <random>
 
-#include "network/SocketUtils.hpp"
 #include <spdlog/spdlog.h>
 
 namespace dice::network {
@@ -32,8 +31,6 @@ bool HostServer::start(uint16_t port) {
     listener_.setBlocking(false);
     isRunning_ = true;
     gameStarted_ = false;
-    lastPingTime_ = std::chrono::steady_clock::now();
-    lastBroadcastTime_ = std::chrono::steady_clock::now();
 
     serverThread_ = std::thread(&HostServer::serverLoop, this);
 
@@ -51,11 +48,12 @@ void HostServer::stop() {
     listener_.close();
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
-        for (auto& [id, socket] : clients_) {
-            socket->disconnect();
+        for (auto& [id, ctx] : clients_) {
+            if (ctx->socket) {
+                ctx->socket->disconnect();
+            }
         }
         clients_.clear();
-        clientInfos_.clear();
     }
     if (serverThread_.joinable()) {
         serverThread_.join();
@@ -68,16 +66,16 @@ void HostServer::serverLoop() {
     while (isRunning_) {
         acceptNewClients();
 
-        std::vector<std::pair<std::string, sf::TcpSocket*>> clientsCopy;
+        std::vector<std::string> clientsCopy;
         {
             const std::lock_guard<std::mutex> lock(clientsMutex_);
-            for (const auto& [id, socket] : clients_) {
-                clientsCopy.emplace_back(id, socket.get());
+            for (const auto& [id, ctx] : clients_) {
+                clientsCopy.push_back(id);
             }
         }
 
-        for (auto& [id, socket] : clientsCopy) {
-            receiveFromClient(*socket, id);
+        for (const auto& id : clientsCopy) {
+            receiveFromClient(id);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -92,70 +90,85 @@ void HostServer::acceptNewClients() {
 
         const std::string clientId = generateId();
 
-        ClientInfo info;
-        {
-            const std::lock_guard<std::mutex> lock(clientsMutex_);
-            clients_[clientId] = std::move(client);
+        auto ctx = std::make_shared<ClientContext>();
+        ctx->socket = std::move(client);
+        ctx->info.id = clientId;
+        ctx->info.name = "Player_" + std::to_string(clients_.size() + 1);
+        ctx->info.ip = ctx->socket->getRemoteAddress().toString();
+        ctx->info.port = ctx->socket->getRemotePort();
+        ctx->info.status = PlayerStatus::Connecting;
+        ctx->info.lastPing = std::chrono::steady_clock::now();
 
-            info.id = clientId;
-            info.name = "Player_" + std::to_string(clients_.size());
-            info.ip = clients_[clientId]->getRemoteAddress().toString();
-            info.port = clients_[clientId]->getRemotePort();
-            info.status = PlayerStatus::Connecting;
-            info.lastPing = std::chrono::steady_clock::now();
-            clientInfos_[clientId] = info;
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex_);
+            clients_[ctx->info.id] = ctx;
         }
 
-        spdlog::info("New client connected: {} ({})", info.name, info.ip);
+        spdlog::info("New client connected: {} ({})", ctx->info.name, ctx->info.ip);
 
         if (onClientJoined_) {
-            onClientJoined_(info);
+            onClientJoined_(ctx->info);
         }
     }
 }
 
-void HostServer::receiveFromClient(sf::TcpSocket& socket, const std::string& client_id) {
-    std::vector<uint8_t> buffer(65536);
+void HostServer::receiveFromClient(const std::string& client_id) {
+    std::shared_ptr<ClientContext> ctx;
+    {
+        std::lock_guard<std::mutex> lock(clientsMutex_);
+        auto it = clients_.find(client_id);
+        if (it == clients_.end()) {
+            return;
+        }
+        ctx = it->second;
+    }
+
+    std::vector<uint8_t> chunk(65536);
     std::size_t received = 0;
 
-    if (socket.receive(buffer.data(), buffer.size(), received) == sf::Socket::Done) {
-        buffer.resize(received);
-        NetworkMessage msg = NetworkMessage::deserialize(buffer);
-        msg.fromId = client_id;
+    if (ctx->socket->receive(chunk.data(), chunk.size(), received) == sf::Socket::Done) {
+        chunk.resize(received);
+        ctx->receiveBuffer.append(chunk);
 
-        spdlog::debug("Received: {}", msg.toString());
+        while (auto msg = ctx->receiveBuffer.extract()) {
+            msg->fromId = client_id;
 
-        {
-            const std::lock_guard<std::mutex> lock(clientsMutex_);
-            if (clientInfos_.contains(client_id)) {
-                clientInfos_[client_id].lastPing = std::chrono::steady_clock::now();
+            spdlog::debug("Received: {}", msg->toString());
+
+            {
+                std::lock_guard<std::mutex> lock(clientsMutex_);
+                if (auto it = clients_.find(client_id); it != clients_.end()) {
+                    it->second->info.lastPing = std::chrono::steady_clock::now();
+                }
             }
-        }
 
-        switch (msg.type) {
-            case MessageType::Handshake:
-                handleHandshake(msg);
-                break;
-            case MessageType::PlayerReady:
-                handlePlayerReady(msg);
-                break;
-            case MessageType::Event:
-                handleEvent(msg);
-                break;
-            case MessageType::MoveObject:
-                handleMoveObject(msg);
-                break;
-            case MessageType::Chat:
-                handleChat(msg);
-                break;
-            case MessageType::Ping:
-                handlePing(msg);
-                break;
-            case MessageType::Disconnect:
-                removeClient(client_id);
-                break;
-            default:
-                break;
+            switch (msg->type) {
+                case MessageType::Handshake:
+                    handleHandshake(*msg);
+                    break;
+                case MessageType::PlayerReady:
+                    handlePlayerReady(*msg);
+                    break;
+                case MessageType::Event:
+                    handleEvent(*msg);
+                    break;
+                case MessageType::MoveObject:
+                    handleMoveObject(*msg);
+                    break;
+                case MessageType::Chat:
+                    handleChat(*msg);
+                    break;
+                case MessageType::Ping:
+                    handlePing(*msg);
+                    break;
+                case MessageType::Disconnect:
+                    removeClient(client_id);
+                    break;
+                default:
+                    spdlog::warn(
+                        "Unknown message type from {}: {}", client_id, static_cast<int>(msg->type));
+                    break;
+            }
         }
     }
 }
@@ -165,9 +178,10 @@ void HostServer::handleHandshake(const NetworkMessage& msg) {
 
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
-        if (clientInfos_.contains(msg.fromId)) {
-            clientInfos_[msg.fromId].name = playerName;
-            clientInfos_[msg.fromId].status = PlayerStatus::Connected;
+        auto it = clients_.find(msg.fromId);
+        if (it != clients_.end()) {
+            it->second->info.name = playerName;
+            it->second->info.status = PlayerStatus::Connected;
         }
     }
 
@@ -180,12 +194,7 @@ void HostServer::handleHandshake(const NetworkMessage& msg) {
     broadcast(joined, msg.fromId);
 
     if (gameStarted_) {
-        nlohmann::json state;
-        {
-            const std::lock_guard<std::mutex> modelLock(modelMutex_);
-            state = model_.toJson();
-        }
-        auto snapshot = NetworkMessage::createSnapshot(state);
+        auto snapshot = NetworkMessage::createSnapshot(model_.toJson());
         sendToClient(msg.fromId, snapshot);
     }
 }
@@ -193,9 +202,10 @@ void HostServer::handleHandshake(const NetworkMessage& msg) {
 void HostServer::handlePlayerReady(const NetworkMessage& msg) {
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
-        if (clientInfos_.contains(msg.fromId)) {
-            clientInfos_[msg.fromId].status = PlayerStatus::Ready;
-            spdlog::info("Player {} is ready", clientInfos_[msg.fromId].name);
+        auto it = clients_.find(msg.fromId);
+        if (it != clients_.end()) {
+            it->second->info.status = PlayerStatus::Ready;
+            spdlog::info("Player {} is ready", it->second->info.name);
         }
     }
 
@@ -221,18 +231,17 @@ void HostServer::handleEvent(const NetworkMessage& msg) {
         return;
     }
 
+    auto obj = model_.getObject(objectId);
+    if (!obj) {
+        spdlog::warn("Event target object not found: {}", objectId);
+        return;
+    }
+
     spdlog::info("Event from {}: {} on {}", msg.fromId, eventName, objectId);
 
-    {
-        const std::lock_guard<std::mutex> modelLock(modelMutex_);
-        auto obj = model_.getObject(objectId);
-        if (!obj) {
-            spdlog::warn("Event target object not found: {}", objectId);
-            return;
-        }
-        actionManager_.saveSnapshot(model_);
-        lua_.fireEvent(eventName, obj.get());
-    }
+    actionManager_.saveSnapshot(model_);
+
+    lua_.fireEvent(eventName, obj.get());
 
     broadcast(msg);
 }
@@ -251,17 +260,9 @@ void HostServer::handleMoveObject(const NetworkMessage& msg) {
 
     core::MoveObjectAction action(objectId, sf::Vector2f(x, y));
 
-    bool executed = false;
-    {
-        const std::lock_guard<std::mutex> modelLock(modelMutex_);
-        if (action.canExecute(model_)) {
-            actionManager_.saveSnapshot(model_);
-            action.execute(model_);
-            executed = true;
-        }
-    }
-
-    if (executed) {
+    if (action.canExecute(model_)) {
+        actionManager_.saveSnapshot(model_);
+        action.execute(model_);
         broadcast(msg);
     } else {
         spdlog::warn("MoveObject rejected: {} cannot be moved", objectId);
@@ -284,8 +285,9 @@ void HostServer::handlePing(const NetworkMessage& msg) {
     sendToClient(msg.fromId, pong);
 
     const std::lock_guard<std::mutex> lock(clientsMutex_);
-    if (clientInfos_.contains(msg.fromId)) {
-        clientInfos_[msg.fromId].lastPing = std::chrono::steady_clock::now();
+    auto it = clients_.find(msg.fromId);
+    if (it != clients_.end()) {
+        it->second->info.lastPing = std::chrono::steady_clock::now();
     }
 }
 
@@ -294,21 +296,17 @@ bool HostServer::isEventAllowedForClient(const std::string& event_name) {
 }
 
 void HostServer::sendToClient(const std::string& client_id, const NetworkMessage& msg) {
-    sf::TcpSocket* socket = nullptr;
+    std::shared_ptr<ClientContext> ctx;
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
         auto it = clients_.find(client_id);
-        if (it != clients_.end()) {
-            socket = it->second.get();
-        }
+        if (it == clients_.end())
+            return;
+        ctx = it->second;
     }
 
-    if (socket == nullptr) {
-        return;
-    }
     auto data = msg.serialize();
-    auto status = sendAll(*socket, data);
-
+    auto status = ctx->socket->send(data.data(), data.size());
     if (status != sf::Socket::Done) {
         spdlog::warn(
             "Failed to send to client {}, status: {}", client_id, static_cast<int>(status));
@@ -318,35 +316,32 @@ void HostServer::sendToClient(const std::string& client_id, const NetworkMessage
 void HostServer::broadcast(const NetworkMessage& msg, const std::string& exclude_id) {
     auto data = msg.serialize();
 
-    {
-        const std::lock_guard lock(clientsMutex_);
-        for (const auto& [id, socket] : clients_) {
-            if (id == exclude_id) {
-                continue;
-            }
-            auto status = sendAll(*socket, data);
-            if (status != sf::Socket::Done) {
-                spdlog::warn(
-                    "Broadcast failed for client {}, status: {}", id, static_cast<int>(status));
-            }
+    const std::lock_guard<std::mutex> lock(clientsMutex_);
+    for (const auto& [id, ctx] : clients_) {
+        if (id == exclude_id)
+            continue;
+        auto status = ctx->socket->send(data.data(), data.size());
+        if (status != sf::Socket::Done) {
+            spdlog::warn(
+                "Broadcast failed for client {}, status: {}", id, static_cast<int>(status));
         }
     }
 }
 
 void HostServer::removeClient(const std::string& client_id) {
-    bool hadClient = false;
-
+    std::shared_ptr<ClientContext> ctx;
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
-        if (clientInfos_.contains(client_id)) {
-            hadClient = true;
-            spdlog::info("Client disconnected: {}", clientInfos_[client_id].name);
+        auto it = clients_.find(client_id);
+        if (it != clients_.end()) {
+            ctx = it->second;
+            clients_.erase(it);
         }
-        clients_.erase(client_id);
-        clientInfos_.erase(client_id);
     }
 
-    if (hadClient) {
+    if (ctx) {
+        spdlog::info("Client disconnected: {}", ctx->info.name);
+
         auto left = NetworkMessage::createPlayerLeft(client_id);
         broadcast(left);
 
@@ -384,8 +379,8 @@ void HostServer::checkTimeouts() {
 
     {
         const std::lock_guard<std::mutex> lock(clientsMutex_);
-        for (const auto& [id, info] : clientInfos_) {
-            const float elapsed = std::chrono::duration<float>(now - info.lastPing).count();
+        for (const auto& [id, ctx] : clients_) {
+            float elapsed = std::chrono::duration<float>(now - ctx->info.lastPing).count();
             if (elapsed > timeoutInterval_) {
                 timedOut.push_back(id);
             }
@@ -407,12 +402,8 @@ void HostServer::broadcastMoveObject(const std::string& object_id, float x, floa
 }
 
 void HostServer::broadcastSnapshot() {
-    nlohmann::json state;
-    {
-        const std::lock_guard<std::mutex> modelLock(modelMutex_);
-        state = model_.toJson();
-    }
-    broadcast(NetworkMessage::createSnapshot(state));
+    auto snapshot = NetworkMessage::createSnapshot(model_.toJson());
+    broadcast(snapshot);
 }
 
 void HostServer::startGame() {
@@ -451,9 +442,9 @@ std::string HostServer::getLocalIp() {
 std::vector<ClientInfo> HostServer::getClients() const {
     const std::lock_guard<std::mutex> lock(clientsMutex_);
     std::vector<ClientInfo> result;
-    result.reserve(clientInfos_.size());
-    for (const auto& [id, info] : clientInfos_) {
-        result.push_back(info);
+    result.reserve(clients_.size());
+    for (const auto& [id, ctx] : clients_) {
+        result.push_back(ctx->info);
     }
     return result;
 }
@@ -461,8 +452,10 @@ std::vector<ClientInfo> HostServer::getClients() const {
 std::string HostServer::generateId() {
     static std::random_device rd;
     static std::mt19937 gen(rd());
+    static std::mutex genMutex;
     static std::uniform_int_distribution<> dis(0, 15);
 
+    std::lock_guard<std::mutex> lock(genMutex);
     const std::string hex = "0123456789abcdef";
     std::string id = "client_";
     for (int i = 0; i < 16; ++i) {

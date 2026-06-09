@@ -14,8 +14,20 @@ std::vector<uint8_t> NetworkMessage::serialize() const {
     json["from"] = fromId;
     json["data"] = data;
 
-    std::string str = json.dump();
-    return {str.begin(), str.end()};
+    std::string jsonStr = json.dump();
+    uint32_t length = static_cast<uint32_t>(jsonStr.size());
+
+    std::vector<uint8_t> result;
+    result.reserve(4 + length);
+
+    result.push_back(static_cast<uint8_t>((length >> 24) & 0xFF));
+    result.push_back(static_cast<uint8_t>((length >> 16) & 0xFF));
+    result.push_back(static_cast<uint8_t>((length >> 8) & 0xFF));
+    result.push_back(static_cast<uint8_t>(length & 0xFF));
+
+    result.insert(result.end(), jsonStr.begin(), jsonStr.end());
+
+    return result;
 }
 
 NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
@@ -23,8 +35,8 @@ NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
     msg.type = MessageType::Invalid;
 
     try {
-        const std::string str(data.begin(), data.end());
-        const nlohmann::json json = nlohmann::json::parse(str);
+        std::string jsonStr(data.begin(), data.end());
+        nlohmann::json json = nlohmann::json::parse(jsonStr);
 
         msg.type = static_cast<MessageType>(json.value("type", 0));
         msg.sequenceId = json.value("seq", 0);
@@ -33,13 +45,10 @@ NetworkMessage NetworkMessage::deserialize(const std::vector<uint8_t>& data) {
         msg.data = json.value("data", nlohmann::json::object());
     } catch (const nlohmann::json::parse_error& e) {
         spdlog::error("JSON parse error: {}", e.what());
-        spdlog::error("Raw data (first 100 bytes): {}",
-                      std::string(data.begin(),
-                                  data.begin() + static_cast<std::ptrdiff_t>(std::min(
-                                                     data.size(), static_cast<size_t>(100)))));
     } catch (const std::exception& e) {
         spdlog::error("Deserialize error: {}", e.what());
     }
+
     return msg;
 }
 
@@ -151,7 +160,7 @@ NetworkMessage NetworkMessage::createDisconnect(const std::string& reason) {
 }
 
 bool NetworkMessage::isValid() const {
-    return type != MessageType::Disconnect;
+    return type != MessageType::Disconnect && type != MessageType::Invalid;
 }
 
 std::string NetworkMessage::toString() const {

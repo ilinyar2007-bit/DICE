@@ -21,6 +21,12 @@
 
 namespace dice::network {
 
+struct ClientContext {
+    std::unique_ptr<sf::TcpSocket> socket;
+    ClientInfo info;
+    MessageBuffer receiveBuffer;
+};
+
 class HostServer {
 public:
     HostServer(core::Model& model,
@@ -65,7 +71,7 @@ public:
 private:
     void serverLoop();
     void acceptNewClients();
-    void receiveFromClient(sf::TcpSocket& socket, const std::string& client_id);
+    void receiveFromClient(const std::string& client_id);
     void sendToClient(const std::string& client_id, const NetworkMessage& msg);
     void broadcast(const NetworkMessage& msg, const std::string& exclude_id = "");
     void removeClient(const std::string& client_id);
@@ -88,8 +94,7 @@ private:
     scripting::LuaScriptEngine& lua_;
 
     sf::TcpListener listener_;
-    std::unordered_map<std::string, std::unique_ptr<sf::TcpSocket>> clients_;
-    std::unordered_map<std::string, ClientInfo> clientInfos_;
+    std::unordered_map<std::string, std::shared_ptr<ClientContext>> clients_;
 
     uint16_t port_ = 0;
     std::atomic<bool> isRunning_{false};

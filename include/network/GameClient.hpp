@@ -71,6 +71,8 @@ private:
     void applyMoveObject(const std::string& object_id, float x, float y);
     void applySnapshot(const nlohmann::json& state);
 
+    MessageBuffer receiveBuffer_;
+
     sf::TcpSocket socket_;
     std::mutex socketMutex_;
     std::string clientId_;

@@ -70,25 +70,27 @@ void GameClient::disconnect() {
 }
 
 void GameClient::receiveLoop() {
-    std::vector<uint8_t> buffer(65536);
+    std::vector<uint8_t> chunk(65536);
     sf::SocketSelector selector;
     selector.add(socket_);
 
     while (running_ && isConnected_) {
         if (selector.wait(sf::milliseconds(100))) {
             std::size_t received = 0;
-            sf::Socket::Status status = sf::Socket::Error;
+            sf::Socket::Status status;
 
             {
-                const std::lock_guard<std::mutex> lock(socketMutex_);
-                status = socket_.receive(buffer.data(), buffer.size(), received);
+                std::lock_guard<std::mutex> lock(socketMutex_);
+                status = socket_.receive(chunk.data(), chunk.size(), received);
             }
 
             if (status == sf::Socket::Done) {
-                buffer.resize(received);
-                auto msg = NetworkMessage::deserialize(buffer);
-                handleMessage(msg);
-                buffer.resize(65536);
+                chunk.resize(received);
+                receiveBuffer_.append(chunk);
+
+                while (auto msg = receiveBuffer_.extract()) {
+                    handleMessage(*msg);
+                }
             } else if (status == sf::Socket::Disconnected) {
                 spdlog::warn("Disconnected from server");
                 disconnect();
