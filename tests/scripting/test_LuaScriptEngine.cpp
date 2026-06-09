@@ -243,7 +243,6 @@ TEST_F(LuaScriptEngineTest, FireEventNullObjectReturnsFalse) {
 TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
     dice::scripting::LuaScriptEngine engine;
 
-    // Register a trigger named "roll_dice" that sets a global flag
     engine.executeGlobalScriptFromSource(R"(
         called = false
         engine.trigger("roll_dice", function(obj)
@@ -251,13 +250,11 @@ TEST(LuaScriptEngineTriggerCatalog, TriggerFiredByBinding) {
         end)
     )");
 
-    // Create a GameObject with a trigger binding
     auto obj = std::make_shared<dice::core::GameObject>("die1", "Die");
     obj->setTriggerBinding("on_click", "roll_dice");
 
     engine.fireEvent("on_click", obj.get());
 
-    // Verify trigger was called
     const bool called = engine.getGlobalVariable<bool>("called");
     EXPECT_TRUE(called);
 }
@@ -301,8 +298,6 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
     )");
 
     engine.clearSceneState();
-
-    // After clear, trigger should not fire (no crash, just returns false)
     auto obj = std::make_shared<dice::core::GameObject>("obj1", "Card");
     obj->setTriggerBinding("on_click", "my_trigger");
     const bool fired = engine.fireEvent("on_click", obj.get());
@@ -312,7 +307,7 @@ TEST(LuaScriptEngineTriggerCatalog, ClearSceneStateClearsTriggers) {
 // ========== Memory limit ==========
 
 TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
-    engine_.setMemoryLimit(size_t{1} * 1024 * 1024); // 1 MB
+    engine_.setMemoryLimit(size_t{1} * 1024 * 1024);
     const std::string src = R"(
         local t = {}
         for i = 1, 10000000 do t[i] = i end
@@ -321,14 +316,12 @@ TEST_F(LuaScriptEngineTest, MemoryLimitBlocksExcessiveAllocation) {
 }
 
 TEST_F(LuaScriptEngineTest, MemoryLimitAllowsNormalScript) {
-    engine_.setMemoryLimit(size_t{64} * 1024 * 1024); // 64 MB
+    engine_.setMemoryLimit(size_t{64} * 1024 * 1024);
     EXPECT_TRUE(engine_.executeGlobalScriptFromSource("local x = 42"));
 }
 
 TEST_F(LuaScriptEngineTest, MemoryLimitAllowsShrinkingTable) {
-    // Install limit when g->used == 0, then let Lua shrink an array.
-    // Without the fix, delta = nsize - osize wraps to ~SIZE_MAX → OOM.
-    engine_.setMemoryLimit(16 * 1024 * 1024); // 16 MB
+    engine_.setMemoryLimit(size_t{16} * 1024 * 1024);
     ASSERT_TRUE(engine_.executeGlobalScriptFromSource(R"(
         local t = {}
         for i = 1, 200 do t[i] = i end
@@ -340,24 +333,14 @@ TEST_F(LuaScriptEngineTest, MemoryLimitAllowsShrinkingTable) {
 }
 
 TEST_F(LuaScriptEngineTest, MemoryLimitGCAfterSetDoesNotCrash) {
-    // Create garbage objects before the limit is installed, then install the
-    // limit and force a full GC.  Without the fix, each free call with
-    // g->used == 0 wraps used to ~SIZE_MAX; getMemoryUsed() will expose the
-    // corruption and the subsequent allocation script will OOM.
     const size_t limit = 32UL * 1024 * 1024;
-    // Run a script that leaves dead objects for the GC (function bytecode +
-    // temporary strings become unreachable once the chunk is done).
     engine_.executeGlobalScriptFromSource(R"(
         local garbage = {}
         for i = 1, 20 do garbage[i] = string.rep("x", i * 10) end
     )");
     engine_.setMemoryLimit(limit);
-    // Force a full GC cycle — this frees objects allocated before the custom
-    // allocator was installed.
     engine_.executeGlobalScriptFromSource("collectgarbage('collect')");
-    // Without the fix, g->used has wrapped; it must stay below the limit.
     EXPECT_LT(engine_.getMemoryUsed(), limit);
-    // A plain allocation must also succeed.
     ASSERT_TRUE(engine_.executeGlobalScriptFromSource(R"(
         local t = {}
         for i = 1, 100 do t[i] = i end
@@ -391,18 +374,9 @@ TEST_F(LuaScriptEngineTest, ExecuteGlobalScriptReturnsTrueOnSuccess) {
 
 // ========== moduleCache_ clearing ==========
 
-// moduleCache_ is populated by loadOrGetCachedModule(), which is called from
-// fireBindingRef() when a GameObject has a trigger binding in "filepath:funcname" format.
-// This test verifies that clearSceneState() actually clears the cache by observing
-// that the module file is re-executed (and its load-time side-effect fires again)
-// after the cache is cleared, but NOT fired a second time when the cache is warm.
 TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
     namespace fs = std::filesystem;
-
-    // Write a Lua module that increments a global counter each time it is
-    // loaded (i.e. each time the file is executed) and returns a table with
-    // a no-op handler.  The counter starts at 0 in the Lua global state
-    // because it has never been set before.
+    
     const auto mod_path =
         fs::temp_directory_path() / ("mod_cache_test_" + std::to_string(::getpid()) + ".lua");
     {
@@ -411,28 +385,21 @@ TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
           << "return { on_click = function(self) end }\n";
     }
 
-    // Build the binding reference expected by fireBindingRef: "path:funcname"
     const std::string binding = mod_path.string() + ":on_click";
 
     auto obj = std::make_shared<dice::core::GameObject>("obj_cache", "Card");
     obj->setTriggerBinding("on_click", binding);
 
-    // First fireEvent: cache miss → file executed → load_count becomes 1
     engine_.fireEvent("on_click", obj.get());
     EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 1)
         << "module should be loaded once on first call";
 
-    // Second fireEvent without clearing: cache hit → file NOT re-executed
     engine_.fireEvent("on_click", obj.get());
     EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 1)
         << "cached module must not be re-executed on second call";
 
-    // Clear scene state — this must clear moduleCache_
     engine_.clearSceneState();
 
-    // Re-attach the binding (clearSceneState also clears scriptRegistry_ /
-    // inline callbacks; the trigger binding lives on the GameObject itself
-    // and is unaffected, so fireEvent can still route through fireBindingRef).
     engine_.fireEvent("on_click", obj.get());
     EXPECT_EQ(engine_.getGlobalVariable<int>("load_count", 0), 2)
         << "module must be re-executed after moduleCache_ is cleared";
@@ -446,7 +413,7 @@ TEST_F(LuaScriptEngineTest, GetGlobalVariableWrongTypeReturnsDefault) {
     engine_.executeGlobalScriptFromSource(R"(flag = "yes")");
     bool result = true;
     EXPECT_NO_THROW({ result = engine_.getGlobalVariable<bool>("flag", false); });
-    EXPECT_EQ(result, false); // type mismatch → default
+    EXPECT_EQ(result, false);
 }
 
 TEST_F(LuaScriptEngineTest, GetGlobalVariableCorrectTypeReturnsValue) {
