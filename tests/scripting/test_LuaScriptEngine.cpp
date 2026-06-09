@@ -433,3 +433,19 @@ TEST_F(LuaScriptEngineTest, ClearSceneStateClearsModuleCache) {
 
     fs::remove(mod_path);
 }
+
+// ========== getGlobalVariable type safety ==========
+
+TEST_F(LuaScriptEngineTest, GetGlobalVariableWrongTypeReturnsDefault) {
+    engine_.executeGlobalScriptFromSource(R"(flag = "yes")");
+    bool result = true;
+    EXPECT_NO_THROW({
+        result = engine_.getGlobalVariable<bool>("flag", false);
+    });
+    EXPECT_EQ(result, false); // type mismatch → default
+}
+
+TEST_F(LuaScriptEngineTest, GetGlobalVariableCorrectTypeReturnsValue) {
+    engine_.executeGlobalScriptFromSource("score = 99");
+    EXPECT_EQ(engine_.getGlobalVariable<int>("score", 0), 99);
+}
