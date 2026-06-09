@@ -18,7 +18,7 @@ bool ActionManager::undo(Model& model) {
     }
     auto current_snapshot = model.toJson();
     auto target = undoStack_.back(); // copy before pop in case fromJson throws
-    model.fromJson(target);          // modify stacks only after this succeeds
+    model.fromJson(target);
     redoStack_.push_back(std::move(current_snapshot));
     undoStack_.pop_back();
     spdlog::debug("Undo: undo={}, redo={}", undoStack_.size(), redoStack_.size());
@@ -30,8 +30,8 @@ bool ActionManager::redo(Model& model) {
         return false;
     }
     auto current_snapshot = model.toJson();
-    auto target = redoStack_.back(); // copy before pop
-    model.fromJson(target);          // modify stacks only after this succeeds
+    auto target = redoStack_.back(); // copy before pop in case fromJson throws
+    model.fromJson(target);
     undoStack_.push_back(std::move(current_snapshot));
     redoStack_.pop_back();
     spdlog::debug("Redo: undo={}, redo={}", undoStack_.size(), redoStack_.size());

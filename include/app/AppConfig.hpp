@@ -59,7 +59,6 @@ inline void from_json(const nlohmann::json& j, AppConfig& cfg) {
     cfg.luaMemoryLimitMb = j.value("luaMemoryLimitMb", cfg.luaMemoryLimitMb);
     cfg.maxSceneObjects  = j.value("maxSceneObjects",  cfg.maxSceneObjects);
 
-    // Clamp negative or zero values to safe defaults
     if (cfg.luaMemoryLimitMb <= 0) {
         spdlog::warn("AppConfig: luaMemoryLimitMb={} invalid, using default 64",
                      cfg.luaMemoryLimitMb);
