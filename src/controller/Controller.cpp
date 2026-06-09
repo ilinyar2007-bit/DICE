@@ -43,6 +43,22 @@ std::string keyToString(sf::Keyboard::Key key) {
     return it != kKeyNames.end() ? std::string{it->second} : std::string{};
 }
 
+bool executeSceneScripts(const nlohmann::json& sceneJson, dice::scripting::LuaScriptEngine& lua) {
+    if (!sceneJson.contains("scripts") || !sceneJson["scripts"].is_array()) {
+        return true;
+    }
+    for (const auto& entry : sceneJson["scripts"]) {
+        if (entry.is_string()) {
+            const auto script = entry.get<std::string>();
+            if (!lua.executeGlobalScript(script)) {
+                spdlog::error("Controller: scene script failed, aborting scene load: {}", script);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void shuffleLuaTable(sol::table t) {
     if (!t.valid()) {
         return;
@@ -130,16 +146,8 @@ bool Controller::loadScene(const std::filesystem::path& path) {
 
     lua_.clearSceneState();
 
-    if (sceneJson.contains("scripts") && sceneJson["scripts"].is_array()) {
-        for (const auto& entry : sceneJson["scripts"]) {
-            if (entry.is_string()) {
-                if (!lua_.executeGlobalScript(entry.get<std::string>())) {
-                    spdlog::error("Controller: scene script failed, aborting scene load: {}",
-                                  entry.get<std::string>());
-                    return false;
-                }
-            }
-        }
+    if (!executeSceneScripts(sceneJson, lua_)) {
+        return false;
     }
 
     model_.clear();
