@@ -53,6 +53,19 @@ DICE - это комплексный инструмент разработки �
 [![sol2](https://img.shields.io/badge/sol2-Lua%20Bindings-000000?style=for-the-badge&logo=lua)](https://sol2.readthedocs.io/)
 
 
+## Сборка
+
+Понадобятся CMake ≥ 3.20, компилятор с поддержкой C++20 и системный Lua 5.3:
+
+```bash
+sudo apt install liblua5.3-dev
+cmake . -B build
+cmake --build build
+cd build && ./dice
+```
+
+Остальные зависимости (SFML, sol2, spdlog, nlohmann/json, Dear ImGui, GoogleTest) загружаются автоматически через FetchContent при первом конфигурировании — внешние пакетные менеджеры не нужны.
+
 ## Документация
 
 - [Архитектура проекта](docs/architecture.md) — обзор модулей, жизненный цикл объектов, Lua-интеграция
